@@ -17,6 +17,7 @@ KiteBlog 是 `ciyuan1234` 的个人博客，基于 Astro 7、Svelte islands 和 
 - 更强的玻璃卡片视觉效果
 - 本地音乐播放器配置入口
 - `/studio/` 网页端控制台，用于本机预览头像、背景、文案和生成文章 Markdown
+- Cloudflare Pages Functions 可保存全站配置、列出/载入/删除云端草稿
 
 ## GitHub Pages 说明
 
@@ -32,6 +33,8 @@ GitHub Pages 只能托管静态文件，不能直接运行长期在线的后端�
 - Git-based CMS，例如 Decap CMS：通过 GitHub 登录管理内容。
 
 不要把 GitHub Token、QQ 密钥或任何私密配置写进前端代码。
+
+Cloudflare 部署见 [docs/CLOUDFLARE.md](docs/CLOUDFLARE.md)。
 
 ## 本地开发
 
@@ -49,6 +52,7 @@ pnpm check
 pnpm type-check
 pnpm format
 pnpm build
+pnpm deploy:cloudflare
 ```
 
 在 Windows PowerShell 如果 `pnpm` 被执行策略拦截，可以使用：
@@ -71,7 +75,7 @@ pnpm.cmd build
 
 ## 发布
 
-仓库已配置 GitHub Actions。推送到 GitHub 后会执行构建，并把 `dist` 发布到 Pages。
+仓库已配置 GitHub Actions，也可以连接 Cloudflare Pages 从 GitHub 自动部署。后续推荐用 Cloudflare Pages 作为正式部署平台，以便启用 `/studio/` 的云端配置和草稿接口。
 
 自定义域名 `kite1024.xyz` 还需要在 GitHub Pages 设置中绑定域名，并在 DNS 服务商处添加 GitHub Pages 需要的 DNS 记录。
 

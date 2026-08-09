@@ -50,8 +50,10 @@ GitHub Actions 会设置：
 - 首页文案
 - 玻璃卡片强度
 - 文章 Markdown 草稿
+- 云端配置同步
+- 云端草稿保存、载入和删除
 
-这些设置默认保存在当前浏览器的 `localStorage`。GitHub Pages 是静态托管，不能直接把这些改动写回仓库；要全站生效，需要复制导出内容并提交代码。
+这些设置默认保存在当前浏览器的 `localStorage`。如果部署到 Cloudflare Pages，并配置 `KITEBLOG_KV` 和 `KITEBLOG_ADMIN_TOKEN`，可以保存到云端并对所有访客生效。
 
 ## 音乐
 
@@ -70,6 +72,8 @@ GitHub Pages 最稳妥的方式是使用本地音乐文件，把音频放在 `pu
 - 私密数据存储
 
 可选方案是 Cloudflare Workers、Vercel/Netlify Functions、GitHub OAuth + GitHub API，或 Decap CMS 这类 Git-based CMS。
+
+Cloudflare 具体部署步骤见 `docs/CLOUDFLARE.md`。
 
 ## 回退
 

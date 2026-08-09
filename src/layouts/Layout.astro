@@ -1748,6 +1748,8 @@ function disableAnimation() {
 <script is:inline data-swup-ignore-script>
   (function initKitePersonalization() {
     var STORAGE_KEY = "kiteblog:studio";
+    var remoteConfig = null;
+    var remoteLoaded = false;
 
     function ensureLayer() {
       var layer = document.getElementById("kite-personal-bg");
@@ -1777,14 +1779,15 @@ function disableAnimation() {
 
     function applyKitePersonalization() {
       var raw = localStorage.getItem(STORAGE_KEY);
-      var data = {};
+      var localData = {};
       if (raw) {
         try {
-          data = JSON.parse(raw) || {};
+          localData = JSON.parse(raw) || {};
         } catch (_) {
-          data = {};
+          localData = {};
         }
       }
+      var data = Object.assign({}, remoteConfig || {}, localData || {});
 
       setText("[data-kite-profile-name]", data.profileName);
       setText("[data-kite-profile-bio]", data.profileBio);
@@ -1809,10 +1812,35 @@ function disableAnimation() {
 
     window.applyKitePersonalization = applyKitePersonalization;
 
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", applyKitePersonalization);
-    } else {
+    function loadRemoteConfig() {
+      if (remoteLoaded) return;
+      remoteLoaded = true;
+      fetch("/api/kite-config", {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      })
+        .then(function (response) {
+          if (!response.ok) return null;
+          return response.json();
+        })
+        .then(function (payload) {
+          if (payload && payload.config && typeof payload.config === "object") {
+            remoteConfig = payload.config;
+            applyKitePersonalization();
+          }
+        })
+        .catch(function () {});
+    }
+
+    function init() {
       applyKitePersonalization();
+      loadRemoteConfig();
+    }
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", init);
+    } else {
+      init();
     }
 
     document.addEventListener("astro:page-load", applyKitePersonalization);

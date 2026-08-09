@@ -4,7 +4,7 @@ import MainGridLayout from "@/layouts/MainGridLayout.astro";
 
 const title = "KiteBlog 控制台";
 const description =
-	"在网页端预览头像、背景、文案和文章草稿。静态部署下改动默认只保存在当前浏览器。";
+	"管理 KiteBlog 的头像、背景、首页文案、云端配置和文章草稿。";
 ---
 
 <MainGridLayout title={title} description={description}>
@@ -12,193 +12,312 @@ const description =
     <header class="studio-hero">
       <div>
         <p class="studio-kicker">KiteBlog Studio</p>
-        <h1>网页端外观与内容工作台</h1>
+        <h1>内容与外观工作台</h1>
         <p>
-          这里的外观设置会保存到当前浏览器的 localStorage，适合预览头像、背景和文案。
-          要让所有访客都看到，需要把导出的配置写回仓库并重新部署。
+          本地预览、云端同步、文章草稿和配置导出集中在这里。Cloudflare KV 可用时，外观配置会对所有访客生效。
         </p>
       </div>
-      <div class="studio-status">
-        <Icon is:inline name="material-symbols:cloud-done-outline-rounded" />
-        <span>GitHub Pages 静态可用</span>
+      <div class="studio-hero-actions">
+        <a href="/" class="studio-link">
+          <Icon is:inline name="material-symbols:home-outline-rounded" />
+          首页
+        </a>
+        <a href="/archive/" class="studio-link">
+          <Icon is:inline name="material-symbols:article-outline-rounded" />
+          文章
+        </a>
       </div>
     </header>
 
-    <div class="studio-grid">
-      <form class="studio-panel" id="studio-appearance">
-        <div class="panel-heading">
-          <Icon is:inline name="material-symbols:palette-outline-rounded" />
-          <div>
-            <h2>外观设置</h2>
-            <p>头像、标题、首页文案、背景和玻璃卡片强度。</p>
+    <div class="studio-layout">
+      <main class="studio-main">
+        <section class="studio-panel">
+          <div class="panel-heading">
+            <Icon is:inline name="material-symbols:palette-outline-rounded" />
+            <div>
+              <h2>外观配置</h2>
+              <p>保存到本机用于预览；保存到云端用于全站同步。</p>
+            </div>
           </div>
-        </div>
 
-        <label>
-          <span>站点标题</span>
-          <input name="siteTitle" value="KiteBlog" placeholder="KiteBlog" />
-        </label>
+          <form id="studio-appearance" class="field-grid">
+            <label>
+              <span>站点标题</span>
+              <input name="siteTitle" value="KiteBlog" placeholder="KiteBlog" />
+            </label>
+            <label>
+              <span>个人名称</span>
+              <input name="profileName" value="Kite" placeholder="Kite" />
+            </label>
+            <label class="span-2">
+              <span>个人简介</span>
+              <input name="profileBio" value="写技术、项目、生活和一些长期问题。" />
+            </label>
+            <label>
+              <span>头像 URL</span>
+              <input name="avatarUrl" placeholder="https://example.com/avatar.png" />
+            </label>
+            <label>
+              <span>背景图 URL</span>
+              <input name="backgroundUrl" placeholder="https://example.com/background.jpg" />
+            </label>
+            <label>
+              <span>首页标题</span>
+              <input name="heroTitle" value="KiteBlog" />
+            </label>
+            <label>
+              <span>首页副标题</span>
+              <input name="heroSubtitle" value="记录技术、项目与生活" />
+            </label>
+            <label>
+              <span>玻璃强度</span>
+              <input name="glassStrength" type="range" min="8" max="30" value="18" />
+            </label>
+            <label>
+              <span>Cloudflare 管理口令</span>
+              <input
+                name="adminToken"
+                type="password"
+                autocomplete="current-password"
+                placeholder="KITEBLOG_ADMIN_TOKEN"
+              />
+            </label>
+          </form>
 
-        <label>
-          <span>个人名称</span>
-          <input name="profileName" value="Kite" placeholder="Kite" />
-        </label>
-
-        <label>
-          <span>个人简介</span>
-          <input name="profileBio" value="写技术、项目、生活和一些长期问题。" />
-        </label>
-
-        <label>
-          <span>头像 URL</span>
-          <input name="avatarUrl" placeholder="https://example.com/avatar.png" />
-        </label>
-
-        <label>
-          <span>首页大标题</span>
-          <input name="heroTitle" value="KiteBlog" />
-        </label>
-
-        <label>
-          <span>首页副标题</span>
-          <input name="heroSubtitle" value="记录技术、项目与生活" />
-        </label>
-
-        <label>
-          <span>背景图 URL</span>
-          <input name="backgroundUrl" placeholder="https://example.com/background.jpg" />
-        </label>
-
-        <label>
-          <span>玻璃强度</span>
-          <input name="glassStrength" type="range" min="8" max="30" value="18" />
-        </label>
-
-        <div class="studio-actions">
-          <button type="submit">
-            <Icon is:inline name="material-symbols:save-outline-rounded" />
-            保存到本机
-          </button>
-          <button type="button" data-reset>
-            <Icon is:inline name="material-symbols:restart-alt-rounded" />
-            重置
-          </button>
-        </div>
-      </form>
-
-      <section class="studio-panel">
-        <div class="panel-heading">
-          <Icon is:inline name="material-symbols:data-object-rounded" />
-          <div>
-            <h2>导出配置</h2>
-            <p>复制后写入对应配置文件，提交到 GitHub 后全站生效。</p>
+          <div class="studio-actions">
+            <button type="button" data-save-local>
+              <Icon is:inline name="material-symbols:save-outline-rounded" />
+              保存本机
+            </button>
+            <button type="button" data-load-cloud>
+              <Icon is:inline name="material-symbols:cloud-download-outline-rounded" />
+              读取云端
+            </button>
+            <button type="button" data-save-cloud>
+              <Icon is:inline name="material-symbols:cloud-upload-outline-rounded" />
+              保存云端
+            </button>
+            <button type="button" data-clear-local>
+              <Icon is:inline name="material-symbols:restart-alt-rounded" />
+              清除本机
+            </button>
           </div>
-        </div>
-        <textarea id="studio-export" readonly rows="16"></textarea>
-        <div class="studio-actions">
-          <button type="button" data-copy-export>
-            <Icon is:inline name="material-symbols:content-copy-outline-rounded" />
-            复制配置
-          </button>
-        </div>
-      </section>
+        </section>
+
+        <section class="studio-panel">
+          <div class="panel-heading">
+            <Icon is:inline name="material-symbols:edit-document-outline-rounded" />
+            <div>
+              <h2>文章编辑</h2>
+              <p>生成规范 Markdown，保存为云端草稿或提交到仓库正式发布。</p>
+            </div>
+          </div>
+
+          <form id="draft-builder" class="field-grid">
+            <label>
+              <span>标题</span>
+              <input name="postTitle" value="新的博客文章" />
+            </label>
+            <label>
+              <span>Slug</span>
+              <input name="postSlug" value="new-post" />
+            </label>
+            <label>
+              <span>分类</span>
+              <input name="postCategory" value="随笔" />
+            </label>
+            <label>
+              <span>标签，用逗号分隔</span>
+              <input name="postTags" value="KiteBlog, 随笔" />
+            </label>
+            <label class="span-2">
+              <span>摘要</span>
+              <input name="postDescription" value="这里是文章摘要，显示在首页卡片和搜索结果中。" />
+            </label>
+            <label class="span-2">
+              <span>正文</span>
+              <textarea name="postBody" rows="9">从这里开始写正文。</textarea>
+            </label>
+          </form>
+
+          <div class="studio-actions">
+            <button type="button" data-generate-post>
+              <Icon is:inline name="material-symbols:article-outline-rounded" />
+              生成 Markdown
+            </button>
+            <button type="button" data-copy-post>
+              <Icon is:inline name="material-symbols:content-copy-outline-rounded" />
+              复制文章
+            </button>
+            <button type="button" data-save-cloud-draft>
+              <Icon is:inline name="material-symbols:cloud-upload-outline-rounded" />
+              保存草稿
+            </button>
+          </div>
+
+          <textarea id="post-output" class="code-output" readonly rows="15"></textarea>
+        </section>
+      </main>
+
+      <aside class="studio-aside">
+        <section class="studio-panel compact">
+          <div class="panel-heading">
+            <Icon is:inline name="material-symbols:cloud-sync-outline-rounded" />
+            <div>
+              <h2>同步状态</h2>
+              <p>Cloudflare 后端状态和最后一次操作结果。</p>
+            </div>
+          </div>
+
+          <div class="status-board">
+            <div>
+              <span>配置源</span>
+              <strong data-config-source>本机</strong>
+            </div>
+            <div>
+              <span>草稿数</span>
+              <strong data-draft-count>0</strong>
+            </div>
+          </div>
+
+          <p class="cloud-status" data-cloud-status>等待操作。</p>
+
+          <div class="studio-actions vertical">
+            <button type="button" data-list-drafts>
+              <Icon is:inline name="material-symbols:refresh-rounded" />
+              刷新草稿
+            </button>
+            <button type="button" data-reset-cloud>
+              <Icon is:inline name="material-symbols:delete-outline-rounded" />
+              重置云端配置
+            </button>
+          </div>
+        </section>
+
+        <section class="studio-panel compact preview-panel">
+          <div class="panel-heading">
+            <Icon is:inline name="material-symbols:visibility-outline-rounded" />
+            <div>
+              <h2>即时预览</h2>
+              <p>当前表单对首页和侧边栏的影响。</p>
+            </div>
+          </div>
+
+          <div class="mini-preview" data-preview-bg>
+            <div class="preview-avatar" data-preview-avatar>K</div>
+            <div>
+              <h3 data-preview-title>KiteBlog</h3>
+              <p data-preview-subtitle>记录技术、项目与生活</p>
+              <span data-preview-bio>写技术、项目、生活和一些长期问题。</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="studio-panel compact">
+          <div class="panel-heading">
+            <Icon is:inline name="material-symbols:folder-open-outline-rounded" />
+            <div>
+              <h2>云端草稿</h2>
+              <p>KV 中最近保存的 Markdown 草稿。</p>
+            </div>
+          </div>
+          <div class="draft-list" data-draft-list>
+            <p class="empty-state">暂无草稿列表。</p>
+          </div>
+        </section>
+
+        <section class="studio-panel compact">
+          <div class="panel-heading">
+            <Icon is:inline name="material-symbols:data-object-rounded" />
+            <div>
+              <h2>导出配置</h2>
+              <p>静态部署或手动提交时使用。</p>
+            </div>
+          </div>
+          <textarea id="studio-export" class="code-output" readonly rows="13"></textarea>
+          <div class="studio-actions">
+            <button type="button" data-copy-export>
+              <Icon is:inline name="material-symbols:content-copy-outline-rounded" />
+              复制配置
+            </button>
+          </div>
+        </section>
+      </aside>
     </div>
-
-    <section class="studio-panel studio-post-panel">
-      <div class="panel-heading">
-        <Icon is:inline name="material-symbols:edit-document-outline-rounded" />
-        <div>
-          <h2>文章草稿生成器</h2>
-          <p>GitHub Pages 不能直接写文件，这里生成 Markdown，放到 `src/content/posts` 后提交即可发布。</p>
-        </div>
-      </div>
-
-      <div class="post-builder-grid">
-        <label>
-          <span>标题</span>
-          <input name="postTitle" value="新的博客文章" />
-        </label>
-        <label>
-          <span>分类</span>
-          <input name="postCategory" value="随笔" />
-        </label>
-        <label>
-          <span>标签，用逗号分隔</span>
-          <input name="postTags" value="KiteBlog, 随笔" />
-        </label>
-        <label>
-          <span>Slug</span>
-          <input name="postSlug" value="new-post" />
-        </label>
-      </div>
-
-      <label>
-        <span>摘要</span>
-        <input name="postDescription" value="这里是文章摘要，显示在首页卡片和搜索结果中。" />
-      </label>
-
-      <label>
-        <span>正文</span>
-        <textarea name="postBody" rows="8">从这里开始写正文。</textarea>
-      </label>
-
-      <textarea id="post-output" readonly rows="14"></textarea>
-      <div class="studio-actions">
-        <button type="button" data-generate-post>
-          <Icon is:inline name="material-symbols:article-outline-rounded" />
-          生成 Markdown
-        </button>
-        <button type="button" data-copy-post>
-          <Icon is:inline name="material-symbols:content-copy-outline-rounded" />
-          复制文章
-        </button>
-      </div>
-    </section>
   </section>
 
   <script is:inline>
     const STORAGE_KEY = "kiteblog:studio";
-    const form = document.getElementById("studio-appearance");
+    const CLOUD_TOKEN_KEY = "kiteblog:admin-token";
+    const appearanceForm = document.getElementById("studio-appearance");
+    const draftForm = document.getElementById("draft-builder");
     const exportBox = document.getElementById("studio-export");
     const postOutput = document.getElementById("post-output");
+    const cloudStatus = document.querySelector("[data-cloud-status]");
+    const configSource = document.querySelector("[data-config-source]");
+    const draftCount = document.querySelector("[data-draft-count]");
+    const draftList = document.querySelector("[data-draft-list]");
 
-    const getValue = (name) => form?.elements[name]?.value?.trim?.() || "";
+    const getAppearance = (name) => appearanceForm?.elements[name]?.value?.trim?.() || "";
+    const getDraft = (name) => draftForm?.elements[name]?.value?.trim?.() || "";
 
-    function readForm() {
+    function setStatus(message, state = "info") {
+      if (!cloudStatus) return;
+      cloudStatus.textContent = message;
+      cloudStatus.dataset.state = state;
+    }
+
+    function setSource(value) {
+      if (configSource) configSource.textContent = value;
+    }
+
+    function quoteYaml(value) {
+      return JSON.stringify(String(value || ""));
+    }
+
+    function getAdminToken() {
+      const token = getAppearance("adminToken");
+      if (token) localStorage.setItem(CLOUD_TOKEN_KEY, token);
+      return token || localStorage.getItem(CLOUD_TOKEN_KEY) || "";
+    }
+
+    function readAppearance() {
       return {
-        siteTitle: getValue("siteTitle"),
-        profileName: getValue("profileName"),
-        profileBio: getValue("profileBio"),
-        avatarUrl: getValue("avatarUrl"),
-        heroTitle: getValue("heroTitle"),
-        heroSubtitle: getValue("heroSubtitle"),
-        backgroundUrl: getValue("backgroundUrl"),
-        glassStrength: `${getValue("glassStrength") || 18}px`,
+        siteTitle: getAppearance("siteTitle"),
+        profileName: getAppearance("profileName"),
+        profileBio: getAppearance("profileBio"),
+        avatarUrl: getAppearance("avatarUrl"),
+        heroTitle: getAppearance("heroTitle"),
+        heroSubtitle: getAppearance("heroSubtitle"),
+        backgroundUrl: getAppearance("backgroundUrl"),
+        glassStrength: `${getAppearance("glassStrength") || 18}px`,
       };
     }
 
-    function fillForm(data) {
-      if (!form || !data) return;
+    function fillAppearance(data) {
+      if (!appearanceForm || !data) return;
       Object.entries(data).forEach(([key, value]) => {
-        if (!form.elements[key]) return;
-        form.elements[key].value = key === "glassStrength" ? String(value).replace("px", "") : value;
+        if (!appearanceForm.elements[key]) return;
+        appearanceForm.elements[key].value =
+          key === "glassStrength" ? String(value).replace("px", "") : value;
       });
+      refreshAll();
     }
 
     function buildExport(data) {
       return `// src/config/profileConfig.ts
-name: "${data.profileName || "Kite"}",
-bio: "${data.profileBio || "写技术、项目、生活和一些长期问题。"}",
-// avatar: "${data.avatarUrl || "assets/images/avatar.avif"}"
+name: ${quoteYaml(data.profileName || "Kite")},
+bio: ${quoteYaml(data.profileBio || "写技术、项目、生活和一些长期问题。")},
+// avatar: ${quoteYaml(data.avatarUrl || "assets/images/avatar.avif")}
 
 // src/config/siteConfig.ts
-title: "${data.siteTitle || "KiteBlog"}",
+title: ${quoteYaml(data.siteTitle || "KiteBlog")},
 site_url: "https://kite1024.xyz",
 
 // src/config/backgroundWallpaper.ts
 homeText: {
-  title: "${data.heroTitle || "KiteBlog"}",
-  subtitle: ["${data.heroSubtitle || "记录技术、项目与生活"}"],
+  title: ${quoteYaml(data.heroTitle || "KiteBlog")},
+  subtitle: [${quoteYaml(data.heroSubtitle || "记录技术、项目与生活")}],
 }
 
 // src/styles/polish.css
@@ -207,75 +326,289 @@ homeText: {
 }`;
     }
 
-    function refreshExport() {
-      const data = readForm();
+    function updatePreview(data) {
+      document.querySelector("[data-preview-title]").textContent = data.heroTitle || data.siteTitle || "KiteBlog";
+      document.querySelector("[data-preview-subtitle]").textContent = data.heroSubtitle || "记录技术、项目与生活";
+      document.querySelector("[data-preview-bio]").textContent = data.profileBio || "写技术、项目、生活和一些长期问题。";
+      const avatar = document.querySelector("[data-preview-avatar]");
+      const bg = document.querySelector("[data-preview-bg]");
+      if (avatar) {
+        avatar.textContent = (data.profileName || "K").slice(0, 1).toUpperCase();
+        avatar.style.backgroundImage = data.avatarUrl ? `url("${data.avatarUrl.replace(/"/g, "%22")}")` : "";
+      }
+      if (bg) {
+        bg.style.backgroundImage = data.backgroundUrl
+          ? `linear-gradient(135deg, rgb(0 0 0 / 0.24), rgb(0 0 0 / 0.52)), url("${data.backgroundUrl.replace(/"/g, "%22")}")`
+          : "";
+      }
+    }
+
+    function refreshAll() {
+      const data = readAppearance();
       if (exportBox) exportBox.value = buildExport(data);
+      updatePreview(data);
       return data;
     }
 
-    function saveAndApply(event) {
-      event?.preventDefault();
-      const data = refreshExport();
+    function saveLocal() {
+      const data = refreshAll();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       window.dispatchEvent(new CustomEvent("kiteblog:studio-updated"));
+      setSource("本机");
+      setStatus("已保存到当前浏览器。", "success");
+    }
+
+    async function apiRequest(url, options = {}) {
+      const headers = new Headers(options.headers || {});
+      headers.set("Accept", "application/json");
+      if (options.body) headers.set("Content-Type", "application/json");
+      const token = getAdminToken();
+      if (token) headers.set("Authorization", `Bearer ${token}`);
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        cache: "no-store",
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.ok === false) {
+        throw new Error(payload.error || `请求失败：${response.status}`);
+      }
+      return payload;
+    }
+
+    async function loadCloudConfig() {
+      setStatus("正在读取云端配置...", "info");
+      try {
+        const payload = await apiRequest("/api/kite-config");
+        if (payload.config) {
+          fillAppearance(payload.config);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload.config));
+          window.dispatchEvent(new CustomEvent("kiteblog:studio-updated"));
+          setSource("云端 KV");
+          setStatus("云端配置已应用。", "success");
+        } else {
+          setSource("默认");
+          setStatus("云端暂无配置。", "info");
+        }
+      } catch (error) {
+        setStatus(`云端读取失败：${error.message}`, "error");
+      }
+    }
+
+    async function saveCloudConfig() {
+      const data = refreshAll();
+      setStatus("正在保存云端配置...", "info");
+      try {
+        await apiRequest("/api/kite-config", {
+          method: "PUT",
+          body: JSON.stringify(data),
+        });
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        window.dispatchEvent(new CustomEvent("kiteblog:studio-updated"));
+        setSource("云端 KV");
+        setStatus("云端配置已保存。", "success");
+      } catch (error) {
+        setStatus(`云端保存失败：${error.message}`, "error");
+      }
+    }
+
+    async function resetCloudConfig() {
+      setStatus("正在重置云端配置...", "info");
+      try {
+        await apiRequest("/api/kite-config", { method: "DELETE" });
+        setSource("默认");
+        setStatus("云端配置已重置。", "success");
+      } catch (error) {
+        setStatus(`云端重置失败：${error.message}`, "error");
+      }
     }
 
     function generatePost() {
-      const title = document.querySelector("[name='postTitle']")?.value?.trim() || "新的博客文章";
-      const category = document.querySelector("[name='postCategory']")?.value?.trim() || "随笔";
-      const slug = document.querySelector("[name='postSlug']")?.value?.trim() || "new-post";
-      const desc = document.querySelector("[name='postDescription']")?.value?.trim() || "";
-      const body = document.querySelector("[name='postBody']")?.value || "";
-      const tags = (document.querySelector("[name='postTags']")?.value || "")
+      const title = getDraft("postTitle") || "新的博客文章";
+      const category = getDraft("postCategory") || "随笔";
+      const slug = getDraft("postSlug") || "new-post";
+      const desc = getDraft("postDescription") || "";
+      const body = draftForm?.elements.postBody?.value || "";
+      const tags = (getDraft("postTags") || "")
         .split(",")
         .map((tag) => tag.trim())
         .filter(Boolean)
-        .map((tag) => `"${tag}"`)
+        .map(quoteYaml)
         .join(", ");
       const today = new Date().toISOString().slice(0, 10);
 
       postOutput.value = `---
-title: ${title}
+title: ${quoteYaml(title)}
 published: ${today}
-description: ${desc}
+description: ${quoteYaml(desc)}
 tags: [${tags}]
-category: ${category}
+category: ${quoteYaml(category)}
 image: ""
-slug: ${slug}
+slug: ${quoteYaml(slug)}
 ---
 
 ${body}
 `;
     }
 
+    function applyMarkdownToForm(markdown) {
+      if (!draftForm || !markdown) return;
+      postOutput.value = markdown;
+      const frontmatter = markdown.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+      if (!frontmatter) return;
+      const meta = frontmatter[1];
+      const body = frontmatter[2] || "";
+      const readMeta = (key) => {
+        const match = meta.match(new RegExp(`^${key}:\\s*(.*)$`, "m"));
+        return match ? match[1].replace(/^["']|["']$/g, "") : "";
+      };
+      draftForm.elements.postTitle.value = readMeta("title") || draftForm.elements.postTitle.value;
+      draftForm.elements.postSlug.value = readMeta("slug") || draftForm.elements.postSlug.value;
+      draftForm.elements.postCategory.value = readMeta("category") || draftForm.elements.postCategory.value;
+      draftForm.elements.postDescription.value =
+        readMeta("description") || draftForm.elements.postDescription.value;
+      const tags = meta.match(/^tags:\s*\[([\s\S]*?)\]$/m);
+      if (tags) draftForm.elements.postTags.value = tags[1].replace(/["']/g, "");
+      draftForm.elements.postBody.value = body.trim();
+    }
+
+    async function saveCloudDraft() {
+      generatePost();
+      setStatus("正在保存云端草稿...", "info");
+      try {
+        const payload = await apiRequest("/api/kite-drafts", {
+          method: "POST",
+          body: JSON.stringify({
+            title: getDraft("postTitle") || "未命名草稿",
+            slug: getDraft("postSlug") || "draft",
+            markdown: postOutput?.value || "",
+          }),
+        });
+        setStatus(`草稿已保存：${payload.key}`, "success");
+        await listDrafts();
+      } catch (error) {
+        setStatus(`草稿保存失败：${error.message}`, "error");
+      }
+    }
+
+    function renderDrafts(items) {
+      if (draftCount) draftCount.textContent = String(items.length);
+      if (!draftList) return;
+      if (!items.length) {
+        draftList.innerHTML = '<p class="empty-state">暂无云端草稿。</p>';
+        return;
+      }
+      draftList.innerHTML = items
+        .map((item) => {
+          const meta = item.metadata || {};
+          const title = meta.title || item.key;
+          const updatedAt = meta.updatedAt ? new Date(meta.updatedAt).toLocaleString() : "未记录时间";
+          return `<div class="draft-item">
+            <div>
+              <strong>${escapeHtml(title)}</strong>
+              <span>${escapeHtml(updatedAt)}</span>
+            </div>
+            <div class="draft-actions">
+              <button type="button" data-draft-load="${escapeHtml(item.key)}">载入</button>
+              <button type="button" data-draft-delete="${escapeHtml(item.key)}">删除</button>
+            </div>
+          </div>`;
+        })
+        .join("");
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[char]));
+    }
+
+    async function listDrafts() {
+      setStatus("正在读取云端草稿...", "info");
+      try {
+        const payload = await apiRequest("/api/kite-drafts");
+        renderDrafts(payload.drafts || []);
+        setStatus("云端草稿已刷新。", "success");
+      } catch (error) {
+        renderDrafts([]);
+        setStatus(`草稿读取失败：${error.message}`, "error");
+      }
+    }
+
+    async function loadDraft(key) {
+      setStatus("正在载入草稿...", "info");
+      try {
+        const payload = await apiRequest(`/api/kite-drafts?key=${encodeURIComponent(key)}`);
+        applyMarkdownToForm(payload.markdown);
+        setStatus("草稿已载入编辑器。", "success");
+      } catch (error) {
+        setStatus(`草稿载入失败：${error.message}`, "error");
+      }
+    }
+
+    async function deleteDraft(key) {
+      setStatus("正在删除草稿...", "info");
+      try {
+        await apiRequest(`/api/kite-drafts?key=${encodeURIComponent(key)}`, { method: "DELETE" });
+        setStatus("草稿已删除。", "success");
+        await listDrafts();
+      } catch (error) {
+        setStatus(`草稿删除失败：${error.message}`, "error");
+      }
+    }
+
     async function copyText(target) {
       if (!target?.value) return;
       await navigator.clipboard.writeText(target.value);
+      setStatus("已复制到剪贴板。", "success");
     }
 
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
-        fillForm(JSON.parse(stored));
+        fillAppearance(JSON.parse(stored));
       } catch {}
     }
+    const storedToken = localStorage.getItem(CLOUD_TOKEN_KEY);
+    if (storedToken && appearanceForm?.elements.adminToken) {
+      appearanceForm.elements.adminToken.value = storedToken;
+    }
 
-    refreshExport();
+    refreshAll();
     generatePost();
 
-    form?.addEventListener("input", () => {
-      const data = refreshExport();
+    appearanceForm?.addEventListener("input", () => {
+      const data = refreshAll();
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       window.dispatchEvent(new CustomEvent("kiteblog:studio-updated"));
     });
-    form?.addEventListener("submit", saveAndApply);
-    document.querySelector("[data-reset]")?.addEventListener("click", () => {
+    draftForm?.addEventListener("input", generatePost);
+
+    document.querySelector("[data-save-local]")?.addEventListener("click", saveLocal);
+    document.querySelector("[data-load-cloud]")?.addEventListener("click", loadCloudConfig);
+    document.querySelector("[data-save-cloud]")?.addEventListener("click", saveCloudConfig);
+    document.querySelector("[data-clear-local]")?.addEventListener("click", () => {
       localStorage.removeItem(STORAGE_KEY);
       location.reload();
     });
-    document.querySelector("[data-copy-export]")?.addEventListener("click", () => copyText(exportBox));
+    document.querySelector("[data-reset-cloud]")?.addEventListener("click", resetCloudConfig);
     document.querySelector("[data-generate-post]")?.addEventListener("click", generatePost);
     document.querySelector("[data-copy-post]")?.addEventListener("click", () => copyText(postOutput));
+    document.querySelector("[data-save-cloud-draft]")?.addEventListener("click", saveCloudDraft);
+    document.querySelector("[data-copy-export]")?.addEventListener("click", () => copyText(exportBox));
+    document.querySelector("[data-list-drafts]")?.addEventListener("click", listDrafts);
+    draftList?.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) return;
+      const loadKey = target.getAttribute("data-draft-load");
+      const deleteKey = target.getAttribute("data-draft-delete");
+      if (loadKey) loadDraft(loadKey);
+      if (deleteKey) deleteDraft(deleteKey);
+    });
   </script>
 </MainGridLayout>
 
@@ -306,25 +639,27 @@ ${body}
   .studio-kicker {
     margin: 0 0 0.45rem;
     color: var(--primary);
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     font-weight: 800;
     text-transform: uppercase;
   }
 
   .studio-hero h1,
-  .studio-panel h2 {
+  .studio-panel h2,
+  .mini-preview h3 {
     margin: 0;
     color: rgb(23 23 23 / 0.9);
     letter-spacing: 0;
   }
 
   :global(.dark) .studio-hero h1,
-  :global(.dark) .studio-panel h2 {
+  :global(.dark) .studio-panel h2,
+  :global(.dark) .mini-preview h3 {
     color: rgb(255 255 255 / 0.9);
   }
 
   .studio-hero h1 {
-    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-size: clamp(1.9rem, 4vw, 3.25rem);
     line-height: 1.05;
   }
 
@@ -335,27 +670,37 @@ ${body}
     line-height: 1.7;
   }
 
-  .studio-status {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    flex-shrink: 0;
-    border-radius: 999px;
-    padding: 0.5rem 0.75rem;
-    color: var(--primary);
-    background: color-mix(in oklch, var(--primary) 12%, transparent);
-    font-weight: 700;
-    white-space: nowrap;
+  .studio-hero-actions,
+  .studio-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
   }
 
-  .studio-grid {
+  .studio-layout {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.9fr);
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.38fr);
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .studio-main,
+  .studio-aside {
+    display: grid;
     gap: 1rem;
   }
 
+  .studio-aside {
+    position: sticky;
+    top: 5.25rem;
+  }
+
   .studio-panel {
-    padding: clamp(1rem, 2.2vw, 1.5rem);
+    padding: clamp(1rem, 2vw, 1.45rem);
+  }
+
+  .studio-panel.compact {
+    padding: 1rem;
   }
 
   .panel-heading {
@@ -368,8 +713,18 @@ ${body}
   .panel-heading > :global(svg) {
     margin-top: 0.1rem;
     color: var(--primary);
-    font-size: 1.6rem;
+    font-size: 1.55rem;
     flex-shrink: 0;
+  }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 0.85rem;
+  }
+
+  .span-2 {
+    grid-column: 1 / -1;
   }
 
   label {
@@ -385,12 +740,13 @@ ${body}
   }
 
   label span {
-    font-size: 0.85rem;
+    font-size: 0.84rem;
   }
 
   input,
   textarea {
     width: 100%;
+    min-width: 0;
     border: 1px solid var(--line-divider);
     border-radius: var(--radius-large);
     padding: 0.75rem 0.85rem;
@@ -411,51 +767,182 @@ ${body}
     line-height: 1.55;
   }
 
-  .studio-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.65rem;
+  .code-output {
     margin-top: 0.9rem;
+    font-size: 0.82rem;
   }
 
-  button {
+  button,
+  .studio-link {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.4rem;
+    min-height: 2.55rem;
     border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider));
     border-radius: var(--radius-large);
-    padding: 0.7rem 0.9rem;
+    padding: 0.65rem 0.85rem;
     color: var(--primary);
     background: color-mix(in oklch, var(--primary) 10%, transparent);
     font-weight: 800;
     cursor: pointer;
+    text-decoration: none;
   }
 
-  button:hover {
+  button:hover,
+  .studio-link:hover {
     background: color-mix(in oklch, var(--primary) 16%, transparent);
   }
 
-  .post-builder-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0 0.75rem;
+  .vertical {
+    flex-direction: column;
   }
 
-  @media (max-width: 900px) {
-    .studio-hero,
-    .studio-grid {
+  .vertical button {
+    width: 100%;
+  }
+
+  .status-board {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+    margin-bottom: 0.85rem;
+  }
+
+  .status-board div,
+  .cloud-status,
+  .draft-item {
+    border: 1px solid var(--line-divider);
+    border-radius: var(--radius-large);
+    background: color-mix(in oklch, var(--card-bg) 62%, transparent);
+  }
+
+  .status-board div {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.75rem;
+  }
+
+  .status-board span,
+  .draft-item span {
+    color: var(--content-meta);
+    font-size: 0.78rem;
+  }
+
+  .cloud-status {
+    margin: 0 0 0.85rem;
+    padding: 0.75rem;
+    font-weight: 700;
+  }
+
+  .cloud-status[data-state="success"] {
+    color: oklch(0.56 0.14 155);
+    border-color: color-mix(in oklch, oklch(0.56 0.14 155) 35%, var(--line-divider));
+  }
+
+  .cloud-status[data-state="error"] {
+    color: oklch(0.56 0.18 25);
+    border-color: color-mix(in oklch, oklch(0.56 0.18 25) 35%, var(--line-divider));
+  }
+
+  .mini-preview {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.9rem;
+    min-height: 9.5rem;
+    align-items: end;
+    border-radius: var(--radius-large);
+    padding: 1rem;
+    color: white;
+    background:
+      linear-gradient(135deg, color-mix(in oklch, var(--primary) 30%, black), rgb(20 20 20 / 0.78)),
+      color-mix(in oklch, var(--primary) 18%, black);
+    background-position: center;
+    background-size: cover;
+    overflow: hidden;
+  }
+
+  .mini-preview h3,
+  .mini-preview p,
+  .mini-preview span {
+    color: white;
+    text-shadow: 0 1px 8px rgb(0 0 0 / 0.3);
+  }
+
+  .mini-preview p {
+    margin: 0.25rem 0;
+  }
+
+  .preview-avatar {
+    display: grid;
+    place-items: center;
+    width: 4rem;
+    height: 4rem;
+    border: 2px solid rgb(255 255 255 / 0.72);
+    border-radius: 999px;
+    background:
+      color-mix(in oklch, var(--primary) 40%, black)
+      center / cover;
+    font-size: 1.5rem;
+    font-weight: 900;
+  }
+
+  .draft-list {
+    display: grid;
+    gap: 0.65rem;
+    max-height: 24rem;
+    overflow: auto;
+  }
+
+  .draft-item {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.75rem;
+  }
+
+  .draft-item strong {
+    display: block;
+    overflow-wrap: anywhere;
+  }
+
+  .draft-actions {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .draft-actions button {
+    min-height: 2.2rem;
+    padding: 0.45rem 0.6rem;
+    font-size: 0.78rem;
+  }
+
+  .empty-state {
+    margin: 0;
+    color: var(--content-meta);
+  }
+
+  @media (max-width: 1020px) {
+    .studio-layout {
       grid-template-columns: 1fr;
     }
 
-    .studio-hero {
-      flex-direction: column;
+    .studio-aside {
+      position: static;
     }
   }
 
   @media (max-width: 640px) {
-    .post-builder-grid {
+    .studio-hero {
+      flex-direction: column;
+    }
+
+    .field-grid,
+    .status-board {
       grid-template-columns: 1fr;
+    }
+
+    .span-2 {
+      grid-column: auto;
     }
   }
 </style>
