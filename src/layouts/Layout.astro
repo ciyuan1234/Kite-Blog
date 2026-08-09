@@ -1744,3 +1744,81 @@ function disableAnimation() {
     requestAnimationFrame(initImageLoadFadeIn);
   });
 </script>
+
+<script is:inline data-swup-ignore-script>
+  (function initKitePersonalization() {
+    var STORAGE_KEY = "kiteblog:studio";
+
+    function ensureLayer() {
+      var layer = document.getElementById("kite-personal-bg");
+      if (!layer) {
+        layer = document.createElement("div");
+        layer.id = "kite-personal-bg";
+        layer.setAttribute("aria-hidden", "true");
+        document.body.prepend(layer);
+      }
+      return layer;
+    }
+
+    function setText(selector, value) {
+      if (!value) return;
+      document.querySelectorAll(selector).forEach(function (node) {
+        node.textContent = value;
+      });
+    }
+
+    function setAvatar(value) {
+      if (!value) return;
+      document.querySelectorAll(".profile-avatar-image img, img.profile-avatar-image").forEach(function (img) {
+        img.setAttribute("src", value);
+        img.setAttribute("srcset", "");
+      });
+    }
+
+    function applyKitePersonalization() {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      var data = {};
+      if (raw) {
+        try {
+          data = JSON.parse(raw) || {};
+        } catch (_) {
+          data = {};
+        }
+      }
+
+      setText("[data-kite-profile-name]", data.profileName);
+      setText("[data-kite-profile-bio]", data.profileBio);
+      setText("[data-kite-nav-title]", data.siteTitle);
+      setText(".banner-title", data.heroTitle);
+      setText(".banner-subtitle", data.heroSubtitle);
+      setAvatar(data.avatarUrl);
+
+      var layer = ensureLayer();
+      if (data.backgroundUrl) {
+        layer.style.backgroundImage = "url('" + String(data.backgroundUrl).replace(/'/g, "%27") + "')";
+        document.documentElement.classList.add("kite-has-personal-bg");
+      } else {
+        layer.style.backgroundImage = "";
+        document.documentElement.classList.remove("kite-has-personal-bg");
+      }
+
+      if (data.glassStrength) {
+        document.documentElement.style.setProperty("--kite-glass-strength", data.glassStrength);
+      }
+    }
+
+    window.applyKitePersonalization = applyKitePersonalization;
+
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", applyKitePersonalization);
+    } else {
+      applyKitePersonalization();
+    }
+
+    document.addEventListener("astro:page-load", applyKitePersonalization);
+    document.addEventListener("swup:contentReplaced", function () {
+      requestAnimationFrame(applyKitePersonalization);
+    });
+    window.addEventListener("kiteblog:studio-updated", applyKitePersonalization);
+  })();
+</script>

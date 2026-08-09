@@ -53,8 +53,9 @@ export async function GET(context: APIContext): Promise<Response> {
 	return rss({
 		title: siteConfig.title,
 		description: siteConfig.subtitle || "No description",
-		site: context.site ?? "https://firefly.cuteleaf.cn",
-		customData: `<templateTheme>Firefly</templateTheme>
+		site: context.site ?? siteConfig.site_url,
+		customData: `<blogSource>https://github.com/ciyuan1234/Kite-Blog</blogSource>
+		<templateTheme>Firefly</templateTheme>
 		<templateThemeVersion>${pkg.version}</templateThemeVersion>
 		<templateThemeUrl>https://github.com/CuteLeaf/Firefly</templateThemeUrl>
 		<lastBuildDate>${formatDateI18nWithTime(new Date())}</lastBuildDate>`,

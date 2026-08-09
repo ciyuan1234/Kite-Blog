@@ -1,31 +1,39 @@
 ---
-title: Deploying This Blog to GitHub Pages
+title: KiteBlog 的 GitHub Pages 部署记录
 published: 2026-08-09
-description: Notes for deploying this Astro site to GitHub Pages through GitHub Actions.
-tags: [GitHub, Astro, Deployment]
-category: Build Log
+description: 记录 KiteBlog 如何通过 GitHub Actions 构建并部署到 GitHub Pages 和自定义域名。
+tags: [GitHub, Astro, 部署]
+category: 构建记录
 image: ./images/github.avif
 slug: github-pages-deployment
 ---
 
-This site is configured for GitHub Pages deployment with GitHub Actions.
+KiteBlog 的部署仓库是：
 
-The workflow supports both user sites and project sites:
+```txt
+https://github.com/ciyuan1234/Kite-Blog.git
+```
 
-- `ciyuan1234.github.io` uses `/` as the base path.
-- Any other repository uses `/<repository-name>/` as the base path.
+站点域名是：
 
-After pushing the repository to GitHub, open the repository settings and enable
-GitHub Pages with **GitHub Actions** as the source.
+```txt
+https://kite1024.xyz
+```
 
-## Deployment Checklist
+项目已经配置 GitHub Actions。推送到 `main` 或 `master` 后，工作流会运行
+`pnpm build`，生成静态文件并发布到 GitHub Pages。
 
-1. Push this repository to GitHub.
-2. Confirm the default branch is `main` or `master`.
-3. Open **Settings > Pages**.
-4. Set the source to **GitHub Actions**.
-5. Run the `Deploy to GitHub Pages` workflow.
+## 部署步骤
 
-The production build generates optimized images, RSS, sitemap, and Pagefind
-search indexes.
+1. 把代码推送到 `ciyuan1234/Kite-Blog`。
+2. 在 GitHub 仓库里打开 `Settings > Pages`。
+3. Source 选择 `GitHub Actions`。
+4. 在 Pages 里绑定自定义域名 `kite1024.xyz`。
+5. 按 GitHub 提示配置 DNS。
 
+`public/CNAME` 已经写入 `kite1024.xyz`，构建时会一起进入发布产物。
+
+## 静态站点限制
+
+GitHub Pages 托管的是静态网页。文章、配置、头像和背景如果要对所有访客生效，
+最终都需要写回仓库并重新部署。

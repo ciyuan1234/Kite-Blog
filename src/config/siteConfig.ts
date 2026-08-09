@@ -6,20 +6,20 @@ const SITE_LANG = "zh_CN";
 
 export const siteConfig: SiteConfig = {
 	// 站点标题
-	title: "ciyuan1234 Blog",
+	title: "KiteBlog",
 
 	// 站点副标题
-	subtitle: "Personal notes, projects, and ideas.",
+	subtitle: "记录技术、生活、项目与长期思考。",
 
 	// 站点 URL
-	site_url: "https://ciyuan1234.github.io",
+	site_url: "https://kite1024.xyz",
 
 	// 站点描述
 	description:
-		"Personal blog of ciyuan1234, collecting notes, projects, ideas, and build logs.",
+		"KiteBlog 是 ciyuan1234 的个人博客，用来记录技术实践、项目构建、生活想法和长期学习笔记。",
 
 	// 站点关键词
-	keywords: ["ciyuan1234", "Blog", "Astro", "Projects", "Notes"],
+	keywords: ["KiteBlog", "ciyuan1234", "个人博客", "Astro", "项目", "笔记"],
 
 	// 主题色
 	themeColor: {
@@ -73,7 +73,7 @@ export const siteConfig: SiteConfig = {
 			alt: "🍀",
 		},
 		// 导航栏标题
-		title: "ciyuan1234",
+		title: "KiteBlog",
 		// 全宽导航栏，导航栏是否占满屏幕宽度
 		widthFull: false,
 		// 导航菜单对齐方式，left：左对齐，center：居中

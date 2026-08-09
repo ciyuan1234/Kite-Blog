@@ -1,25 +1,25 @@
-# Personalization Guide
+# KiteBlog 个性化说明
 
-This site is prepared for GitHub Pages and static hosting.
+这个站点已经按 GitHub Pages 静态部署方式整理。
 
-## Identity
+## 个人信息
 
-Edit `src/config/profileConfig.ts`.
+编辑 `src/config/profileConfig.ts`：
 
-- `avatar`: author avatar
-- `name`: profile name
-- `bio`: short intro
-- `links`: GitHub, QQ, email, RSS, or other social links
+- `avatar`：头像
+- `name`：昵称
+- `bio`：简介
+- `links`：GitHub、QQ、邮箱、RSS 或其他社交链接
 
-Your GitHub profile is already set to:
+当前 GitHub 主页：
 
 ```ts
 https://github.com/ciyuan1234
 ```
 
-## Site Metadata
+## 站点信息
 
-Edit `src/config/siteConfig.ts`.
+编辑 `src/config/siteConfig.ts`：
 
 - `title`
 - `subtitle`
@@ -27,68 +27,59 @@ Edit `src/config/siteConfig.ts`.
 - `description`
 - `keywords`
 - `themeColor.hue`
-- page switches under `pages`
+- `pages` 下的页面开关
 
-For GitHub Pages, `astro.config.mjs` also reads these environment variables:
+GitHub Actions 会设置：
 
-- `PUBLIC_SITE_URL`
-- `PUBLIC_BASE_PATH`
+- `PUBLIC_SITE_URL=https://kite1024.xyz`
+- `PUBLIC_BASE_PATH=/`
 
-The GitHub Actions workflow sets them automatically.
+## 背景与首页文案
 
-## Backgrounds
+编辑 `src/config/backgroundWallpaper.ts`。
 
-Edit `src/config/backgroundWallpaper.ts`.
+桌面背景放在 `src/assets/images/DesktopWallpaper`，移动端背景放在 `src/assets/images/MobileWallpaper`。可以配置一张图，也可以配置数组轮播。
 
-Desktop images are in `src/assets/images/DesktopWallpaper`.
-Mobile images are in `src/assets/images/MobileWallpaper`.
+## 网页端控制台
 
-You can use one image or an array of images. The carousel is enabled by default.
+打开 `/studio/` 可以在浏览器端预览：
 
-## Music
+- 头像 URL
+- 背景图 URL
+- 站点标题
+- 首页文案
+- 玻璃卡片强度
+- 文章 Markdown 草稿
 
-Edit `src/config/musicConfig.ts`.
+这些设置默认保存在当前浏览器的 `localStorage`。GitHub Pages 是静态托管，不能直接把这些改动写回仓库；要全站生效，需要复制导出内容并提交代码。
 
-The safest GitHub Pages setup is `mode: "local"` with audio files placed under
-`public/assets/music`.
+## 音乐
 
-Remote music APIs can work in the browser, but they depend on third-party
-availability and cross-origin behavior.
+编辑 `src/config/musicConfig.ts`。
 
-## Static Features
+GitHub Pages 最稳妥的方式是使用本地音乐文件，把音频放在 `public/assets/music` 下。远程音乐 API 可能受跨域和第三方稳定性影响。
 
-These features work well on GitHub Pages:
+## 需要外部服务的功能
 
-- Posts
-- Archive
-- Tags and categories
-- Pagefind search
-- Gallery
-- Bookmarks
-- RSS
-- Sitemap
-- Wallpaper and theme controls
-- Local music player
+以下功能不能只靠 GitHub Pages 完成：
 
-## Features Requiring External Services
+- 真正的网页端文章发布和编辑
+- 所有访客共享的头像/背景设置
+- 评论和留言
+- 后台登录
+- 私密数据存储
 
-Keep these disabled until you configure the required service:
+可选方案是 Cloudflare Workers、Vercel/Netlify Functions、GitHub OAuth + GitHub API，或 Decap CMS 这类 Git-based CMS。
 
-- Comments
-- Guestbook comments
-- Sponsor payment methods
-- Bangumi or Bilibili sync
-- Remote Memos feed
+## 回退
 
-## Rollback
-
-The imported original version is tagged as:
+导入原始版本已经打标签：
 
 ```sh
 git checkout baseline-v1
 ```
 
-To return from the tag back to the working branch:
+回到当前开发分支：
 
 ```sh
 git switch master

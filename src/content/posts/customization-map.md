@@ -1,49 +1,53 @@
 ---
-title: Personalization Map
+title: KiteBlog 自定义地图
 published: 2026-08-09
-description: A quick map of the files that control identity, visuals, and optional features.
-tags: [Config, Design]
-category: Guide
+description: 快速了解 KiteBlog 的头像、背景、音乐、页面开关和视觉效果应该在哪里修改。
+tags: [配置, 设计]
+category: 指南
 image: ./images/both-grid.avif
 slug: customization-map
 ---
 
-This post is a map for future customization.
+这篇文章是一张自定义地图。
 
-## Identity
+## 身份信息
 
-Edit `src/config/profileConfig.ts` to change the avatar, name, bio, and social
-links. Your GitHub profile is already configured as
-`https://github.com/ciyuan1234`.
+修改 `src/config/profileConfig.ts`：
 
-## Visuals
+- 名称
+- 简介
+- 头像
+- GitHub 链接
+- QQ、邮箱、RSS 或其他社交链接
 
-Edit `src/config/backgroundWallpaper.ts` to change the home background images.
-Desktop and mobile images can be configured separately, and the carousel can be
-turned on or off.
+当前 GitHub 主页已经配置为：
 
-Edit `src/styles/polish.css` for the added visual layer: card shadows, hover
-states, nav polish, banner readability, and mobile spacing.
+```txt
+https://github.com/ciyuan1234
+```
 
-## Features
+## 视觉效果
 
-Static features work well on GitHub Pages:
+修改 `src/config/backgroundWallpaper.ts` 配置首页背景。
+桌面端和移动端可以使用不同图片，也可以使用多张图片轮播。
 
-- Posts
-- Tags and categories
-- Archive
-- Search
-- Gallery
-- Bookmarks
-- RSS and sitemap
-- Local music player
-- Theme and wallpaper controls
+新增的视觉美化主要在：
 
-Features that need an external service should stay disabled until configured:
+```txt
+src/styles/polish.css
+```
 
-- Comments
-- Guestbook comments
-- Remote dynamic feeds
-- Sponsor payment methods
-- Bangumi or Bilibili account sync
+这里控制卡片阴影、玻璃效果、导航栏层次、横幅文字可读性和移动端间距。
 
+## 网页端控制台
+
+打开 `/studio/` 可以在浏览器里临时修改：
+
+- 头像 URL
+- 昵称和简介
+- 首页标题和副标题
+- 背景图片 URL
+- 玻璃卡片强度
+- 文章 Markdown 草稿
+
+这些设置默认只保存在当前浏览器。要发布给所有人，需要把导出的配置写回代码。

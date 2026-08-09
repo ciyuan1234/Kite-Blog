@@ -73,15 +73,15 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			// 是否启用主页横幅文字
 			enable: true,
 			// 主页横幅主标题
-			title: "ciyuan1234 Blog",
+			title: "KiteBlog",
 			// 主页横幅主标题字体大小
 			titleSize: "4.5rem",
 			// 主页横幅副标题
 			subtitle: [
-				"Writing notes for future me",
-				"Building small things with care",
-				"Collecting ideas worth revisiting",
-				"Learning in public, one post at a time",
+				"记录技术、项目与生活",
+				"把零散想法写成长期笔记",
+				"持续构建，持续整理",
+				"在公开写作里沉淀经验",
 			],
 			// 主页横幅副标题字体大小
 			subtitleSize: "1.5rem",

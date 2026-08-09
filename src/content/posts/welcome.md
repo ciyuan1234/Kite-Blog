@@ -1,36 +1,36 @@
 ---
-title: Welcome to ciyuan1234 Blog
+title: 欢迎来到 KiteBlog
 published: 2026-08-09
 pinned: true
-description: A clean starting point for this personal blog, with notes, projects, and long-term records.
-tags: [Blog, Personal]
-category: Journal
+description: 这是 KiteBlog 的起始文章，用来说明这个个人博客会记录什么，以及如何继续自定义。
+tags: [博客, 个人站]
+category: 随笔
 image: ./images/firefly1.avif
 slug: welcome
 ---
 
-This is the first post of the site.
+欢迎来到 KiteBlog。
 
-The blog is ready for writing notes, publishing projects, collecting references,
-and keeping a public record of learning. Replace this post when your first real
-article is ready.
+这个站点会用来记录技术实践、项目过程、生活想法，以及一些值得长期整理的问题。
+当前页面已经从原模板演示站清理成个人博客结构，你可以直接开始写自己的内容。
 
-## What This Site Includes
+## 目前包含的功能
 
-- A responsive Astro blog layout
-- Search powered by Pagefind after production build
-- Tag, category, archive, gallery, moments, and bookmark pages
-- Theme, layout, wallpaper, and animation controls
-- A local music player that can be customized from the config file
+- 文章、归档、分类、标签
+- Pagefind 静态搜索
+- 相册、动态、书签导航
+- RSS 和 Sitemap
+- 背景轮播、主题切换、布局切换
+- 本地音乐播放器
+- 网页端外观控制台
 
-## Where to Customize
+## 后续怎么自定义
 
-Most personal settings live in `src/config`.
+常用配置集中在 `src/config`：
 
-Start with:
+- `profileConfig.ts`：头像、昵称、简介、GitHub、QQ、邮箱等
+- `siteConfig.ts`：站点名、域名、页面开关、文章布局
+- `backgroundWallpaper.ts`：桌面端和移动端背景图、轮播效果
+- `musicConfig.ts`：本地音乐列表或远程音乐 API
 
-- `profileConfig.ts` for avatar, name, GitHub, QQ, email, and RSS links
-- `siteConfig.ts` for title, site URL, page switches, and layout
-- `backgroundWallpaper.ts` for desktop/mobile backgrounds and carousel settings
-- `musicConfig.ts` for the local playlist or a supported music API
-
+如果只是想在当前浏览器里预览头像、背景和文案，可以打开 `/studio/`。

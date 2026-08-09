@@ -1,7 +1,5 @@
 {
   "src:assets/images/avatar.avif": "dcd8d5d1cecabea9a9",
-  "public:gallery/firefly-2026/cover.avif": "7588a28a8f989e8d88",
-  "public:gallery/firefly-2026/1.avif": "c8bca9dde6d2babfb5",
   "src:assets/images/DesktopWallpaper/d6.avif": "d9e5ec9ca7aebda9b0",
   "src:assets/images/DesktopWallpaper/d5.avif": "e2dbe0e1dae1d9c9cd",
   "src:assets/images/DesktopWallpaper/d4.avif": "727991b7a7bbe2b8c2",
@@ -33,5 +31,7 @@
   "src:content/posts/images/1.avif": "b5b0b3bcb6bbe0e0df",
   "src:content/posts/guide/cover.avif": "c8bca9dde6d2babfb5",
   "src:assets/images/logo/firefly-light.png": "000000000000000000",
-  "src:assets/images/logo/firefly-dark.png": "ffffffffffffffffff"
+  "src:assets/images/logo/firefly-dark.png": "ffffffffffffffffff",
+  "public:gallery/kite-archive/cover.avif": "7588a28a8f989e8d88",
+  "public:gallery/kite-archive/1.avif": "c8bca9dde6d2babfb5"
 }

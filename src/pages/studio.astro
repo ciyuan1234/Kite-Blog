@@ -1,0 +1,461 @@
+---
+import { Icon } from "astro-icon/components";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+const title = "KiteBlog 控制台";
+const description =
+	"在网页端预览头像、背景、文案和文章草稿。静态部署下改动默认只保存在当前浏览器。";
+---
+
+<MainGridLayout title={title} description={description}>
+  <section class="studio-shell">
+    <header class="studio-hero">
+      <div>
+        <p class="studio-kicker">KiteBlog Studio</p>
+        <h1>网页端外观与内容工作台</h1>
+        <p>
+          这里的外观设置会保存到当前浏览器的 localStorage，适合预览头像、背景和文案。
+          要让所有访客都看到，需要把导出的配置写回仓库并重新部署。
+        </p>
+      </div>
+      <div class="studio-status">
+        <Icon is:inline name="material-symbols:cloud-done-outline-rounded" />
+        <span>GitHub Pages 静态可用</span>
+      </div>
+    </header>
+
+    <div class="studio-grid">
+      <form class="studio-panel" id="studio-appearance">
+        <div class="panel-heading">
+          <Icon is:inline name="material-symbols:palette-outline-rounded" />
+          <div>
+            <h2>外观设置</h2>
+            <p>头像、标题、首页文案、背景和玻璃卡片强度。</p>
+          </div>
+        </div>
+
+        <label>
+          <span>站点标题</span>
+          <input name="siteTitle" value="KiteBlog" placeholder="KiteBlog" />
+        </label>
+
+        <label>
+          <span>个人名称</span>
+          <input name="profileName" value="Kite" placeholder="Kite" />
+        </label>
+
+        <label>
+          <span>个人简介</span>
+          <input name="profileBio" value="写技术、项目、生活和一些长期问题。" />
+        </label>
+
+        <label>
+          <span>头像 URL</span>
+          <input name="avatarUrl" placeholder="https://example.com/avatar.png" />
+        </label>
+
+        <label>
+          <span>首页大标题</span>
+          <input name="heroTitle" value="KiteBlog" />
+        </label>
+
+        <label>
+          <span>首页副标题</span>
+          <input name="heroSubtitle" value="记录技术、项目与生活" />
+        </label>
+
+        <label>
+          <span>背景图 URL</span>
+          <input name="backgroundUrl" placeholder="https://example.com/background.jpg" />
+        </label>
+
+        <label>
+          <span>玻璃强度</span>
+          <input name="glassStrength" type="range" min="8" max="30" value="18" />
+        </label>
+
+        <div class="studio-actions">
+          <button type="submit">
+            <Icon is:inline name="material-symbols:save-outline-rounded" />
+            保存到本机
+          </button>
+          <button type="button" data-reset>
+            <Icon is:inline name="material-symbols:restart-alt-rounded" />
+            重置
+          </button>
+        </div>
+      </form>
+
+      <section class="studio-panel">
+        <div class="panel-heading">
+          <Icon is:inline name="material-symbols:data-object-rounded" />
+          <div>
+            <h2>导出配置</h2>
+            <p>复制后写入对应配置文件，提交到 GitHub 后全站生效。</p>
+          </div>
+        </div>
+        <textarea id="studio-export" readonly rows="16"></textarea>
+        <div class="studio-actions">
+          <button type="button" data-copy-export>
+            <Icon is:inline name="material-symbols:content-copy-outline-rounded" />
+            复制配置
+          </button>
+        </div>
+      </section>
+    </div>
+
+    <section class="studio-panel studio-post-panel">
+      <div class="panel-heading">
+        <Icon is:inline name="material-symbols:edit-document-outline-rounded" />
+        <div>
+          <h2>文章草稿生成器</h2>
+          <p>GitHub Pages 不能直接写文件，这里生成 Markdown，放到 `src/content/posts` 后提交即可发布。</p>
+        </div>
+      </div>
+
+      <div class="post-builder-grid">
+        <label>
+          <span>标题</span>
+          <input name="postTitle" value="新的博客文章" />
+        </label>
+        <label>
+          <span>分类</span>
+          <input name="postCategory" value="随笔" />
+        </label>
+        <label>
+          <span>标签，用逗号分隔</span>
+          <input name="postTags" value="KiteBlog, 随笔" />
+        </label>
+        <label>
+          <span>Slug</span>
+          <input name="postSlug" value="new-post" />
+        </label>
+      </div>
+
+      <label>
+        <span>摘要</span>
+        <input name="postDescription" value="这里是文章摘要，显示在首页卡片和搜索结果中。" />
+      </label>
+
+      <label>
+        <span>正文</span>
+        <textarea name="postBody" rows="8">从这里开始写正文。</textarea>
+      </label>
+
+      <textarea id="post-output" readonly rows="14"></textarea>
+      <div class="studio-actions">
+        <button type="button" data-generate-post>
+          <Icon is:inline name="material-symbols:article-outline-rounded" />
+          生成 Markdown
+        </button>
+        <button type="button" data-copy-post>
+          <Icon is:inline name="material-symbols:content-copy-outline-rounded" />
+          复制文章
+        </button>
+      </div>
+    </section>
+  </section>
+
+  <script is:inline>
+    const STORAGE_KEY = "kiteblog:studio";
+    const form = document.getElementById("studio-appearance");
+    const exportBox = document.getElementById("studio-export");
+    const postOutput = document.getElementById("post-output");
+
+    const getValue = (name) => form?.elements[name]?.value?.trim?.() || "";
+
+    function readForm() {
+      return {
+        siteTitle: getValue("siteTitle"),
+        profileName: getValue("profileName"),
+        profileBio: getValue("profileBio"),
+        avatarUrl: getValue("avatarUrl"),
+        heroTitle: getValue("heroTitle"),
+        heroSubtitle: getValue("heroSubtitle"),
+        backgroundUrl: getValue("backgroundUrl"),
+        glassStrength: `${getValue("glassStrength") || 18}px`,
+      };
+    }
+
+    function fillForm(data) {
+      if (!form || !data) return;
+      Object.entries(data).forEach(([key, value]) => {
+        if (!form.elements[key]) return;
+        form.elements[key].value = key === "glassStrength" ? String(value).replace("px", "") : value;
+      });
+    }
+
+    function buildExport(data) {
+      return `// src/config/profileConfig.ts
+name: "${data.profileName || "Kite"}",
+bio: "${data.profileBio || "写技术、项目、生活和一些长期问题。"}",
+// avatar: "${data.avatarUrl || "assets/images/avatar.avif"}"
+
+// src/config/siteConfig.ts
+title: "${data.siteTitle || "KiteBlog"}",
+site_url: "https://kite1024.xyz",
+
+// src/config/backgroundWallpaper.ts
+homeText: {
+  title: "${data.heroTitle || "KiteBlog"}",
+  subtitle: ["${data.heroSubtitle || "记录技术、项目与生活"}"],
+}
+
+// src/styles/polish.css
+:root {
+  --kite-glass-strength: ${data.glassStrength || "18px"};
+}`;
+    }
+
+    function refreshExport() {
+      const data = readForm();
+      if (exportBox) exportBox.value = buildExport(data);
+      return data;
+    }
+
+    function saveAndApply(event) {
+      event?.preventDefault();
+      const data = refreshExport();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      window.dispatchEvent(new CustomEvent("kiteblog:studio-updated"));
+    }
+
+    function generatePost() {
+      const title = document.querySelector("[name='postTitle']")?.value?.trim() || "新的博客文章";
+      const category = document.querySelector("[name='postCategory']")?.value?.trim() || "随笔";
+      const slug = document.querySelector("[name='postSlug']")?.value?.trim() || "new-post";
+      const desc = document.querySelector("[name='postDescription']")?.value?.trim() || "";
+      const body = document.querySelector("[name='postBody']")?.value || "";
+      const tags = (document.querySelector("[name='postTags']")?.value || "")
+        .split(",")
+        .map((tag) => tag.trim())
+        .filter(Boolean)
+        .map((tag) => `"${tag}"`)
+        .join(", ");
+      const today = new Date().toISOString().slice(0, 10);
+
+      postOutput.value = `---
+title: ${title}
+published: ${today}
+description: ${desc}
+tags: [${tags}]
+category: ${category}
+image: ""
+slug: ${slug}
+---
+
+${body}
+`;
+    }
+
+    async function copyText(target) {
+      if (!target?.value) return;
+      await navigator.clipboard.writeText(target.value);
+    }
+
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        fillForm(JSON.parse(stored));
+      } catch {}
+    }
+
+    refreshExport();
+    generatePost();
+
+    form?.addEventListener("input", () => {
+      const data = refreshExport();
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      window.dispatchEvent(new CustomEvent("kiteblog:studio-updated"));
+    });
+    form?.addEventListener("submit", saveAndApply);
+    document.querySelector("[data-reset]")?.addEventListener("click", () => {
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    });
+    document.querySelector("[data-copy-export]")?.addEventListener("click", () => copyText(exportBox));
+    document.querySelector("[data-generate-post]")?.addEventListener("click", generatePost);
+    document.querySelector("[data-copy-post]")?.addEventListener("click", () => copyText(postOutput));
+  </script>
+</MainGridLayout>
+
+<style>
+  .studio-shell {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .studio-hero,
+  .studio-panel {
+    border: 1px solid var(--line-divider);
+    border-radius: var(--radius-large);
+    background: color-mix(in oklch, var(--card-bg) 76%, transparent);
+    box-shadow: var(--surface-shadow);
+    backdrop-filter: saturate(1.2) blur(var(--kite-glass-strength, 18px));
+  }
+
+  .studio-hero {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: clamp(1.25rem, 3vw, 2rem);
+  }
+
+  .studio-kicker {
+    margin: 0 0 0.45rem;
+    color: var(--primary);
+    font-size: 0.8rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .studio-hero h1,
+  .studio-panel h2 {
+    margin: 0;
+    color: rgb(23 23 23 / 0.9);
+    letter-spacing: 0;
+  }
+
+  :global(.dark) .studio-hero h1,
+  :global(.dark) .studio-panel h2 {
+    color: rgb(255 255 255 / 0.9);
+  }
+
+  .studio-hero h1 {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    line-height: 1.05;
+  }
+
+  .studio-hero p,
+  .studio-panel p {
+    margin: 0.5rem 0 0;
+    color: var(--content-meta);
+    line-height: 1.7;
+  }
+
+  .studio-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-shrink: 0;
+    border-radius: 999px;
+    padding: 0.5rem 0.75rem;
+    color: var(--primary);
+    background: color-mix(in oklch, var(--primary) 12%, transparent);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .studio-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.9fr);
+    gap: 1rem;
+  }
+
+  .studio-panel {
+    padding: clamp(1rem, 2.2vw, 1.5rem);
+  }
+
+  .panel-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .panel-heading > :global(svg) {
+    margin-top: 0.1rem;
+    color: var(--primary);
+    font-size: 1.6rem;
+    flex-shrink: 0;
+  }
+
+  label {
+    display: grid;
+    gap: 0.4rem;
+    margin-bottom: 0.9rem;
+    color: rgb(23 23 23 / 0.82);
+    font-weight: 700;
+  }
+
+  :global(.dark) label {
+    color: rgb(255 255 255 / 0.82);
+  }
+
+  label span {
+    font-size: 0.85rem;
+  }
+
+  input,
+  textarea {
+    width: 100%;
+    border: 1px solid var(--line-divider);
+    border-radius: var(--radius-large);
+    padding: 0.75rem 0.85rem;
+    color: inherit;
+    background: color-mix(in oklch, var(--card-bg) 66%, transparent);
+    outline: none;
+  }
+
+  input:focus,
+  textarea:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 16%, transparent);
+  }
+
+  textarea {
+    resize: vertical;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    line-height: 1.55;
+  }
+
+  .studio-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 0.9rem;
+  }
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider));
+    border-radius: var(--radius-large);
+    padding: 0.7rem 0.9rem;
+    color: var(--primary);
+    background: color-mix(in oklch, var(--primary) 10%, transparent);
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  button:hover {
+    background: color-mix(in oklch, var(--primary) 16%, transparent);
+  }
+
+  .post-builder-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 0.75rem;
+  }
+
+  @media (max-width: 900px) {
+    .studio-hero,
+    .studio-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .studio-hero {
+      flex-direction: column;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .post-builder-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,4 @@
+# 每行一个图片 URL，支持 jpg/png/webp/avif/gif 后缀
+# # 号开头的行为注释，空行会被忽略
+# 示例：
+# https://example.com/photo.webp

@@ -1,26 +1,26 @@
 name: Bug Report
-description: Create a report to help us improve
+description: 反馈 KiteBlog 的问题
 title: "[Bug]: "
 labels: ["bug"]
 assignees:
-  - CuteLeaf
+  - ciyuan1234
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report!
+        感谢反馈 KiteBlog 的问题。
   - type: textarea
     id: bug-description
     attributes:
-      label: Describe the bug
-      description: A clear and concise description of what the bug is.
+      label: 问题描述
+      description: 请清楚描述你遇到的问题。
     validations:
       required: true
   - type: textarea
     id: to-reproduce
     attributes:
-      label: To Reproduce
-      description: Steps to reproduce the behavior.
+      label: 复现步骤
+      description: 请列出复现方式。
       placeholder: |
         1. Go to '...'
         2. Click on '....'
@@ -31,8 +31,8 @@ body:
   - type: textarea
     id: expected-behavior
     attributes:
-      label: Expected behavior
-      description: A clear and concise description of what you expected to happen.
+      label: 期望行为
+      description: 说明你预期应该发生什么。
     validations:
       required: true
   - type: dropdown
@@ -49,10 +49,10 @@ body:
   - type: input
     id: browser
     attributes:
-      label: Browser
+      label: 浏览器
       placeholder: e.g. chrome, safari
   - type: textarea
     id: additional-context
     attributes:
-      label: Additional context
-      description: Add any other context about the problem here.
+      label: 补充信息
+      description: 可以添加截图、日志或其他背景。

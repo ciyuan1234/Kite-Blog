@@ -167,7 +167,7 @@ const logoVariants = await Promise.all(
                                     ) : (
                                         <Icon is:inline name="material-symbols:home-pin-outline" class="navbar-logo text-[1.75rem] mb-1 mr-2" />
                                     )}
-                    {navbarTitle}
+                    <span data-kite-nav-title>{navbarTitle}</span>
                 </div>
             </a>
             <div class:list={[

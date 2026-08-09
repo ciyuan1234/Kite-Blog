@@ -1,14 +1,20 @@
-# About Me
+# 关于 KiteBlog
 
-Welcome to my personal site.
+你好，这里是 **KiteBlog**。
 
-This site is built with Astro and adapted from the open-source
-[Firefly](https://github.com/CuteLeaf/Firefly) theme, which is based on
-[Fuwari](https://github.com/saicaca/fuwari).
+这个网站用于记录技术实践、项目构建、生活想法和长期学习笔记。站点使用
+**Astro** 构建，部署目标是 GitHub Pages 和自定义域名
+`kite1024.xyz`。
 
-I use this place to collect notes, projects, reading records, and small ideas.
-More personal details and social links can be added in `src/config/profileConfig.ts`.
+## 站点说明
 
-::github{repo="CuteLeaf/Firefly"}
+- GitHub 主页：[ciyuan1234](https://github.com/ciyuan1234)
+- 博客仓库：[ciyuan1234/Kite-Blog](https://github.com/ciyuan1234/Kite-Blog)
+- 博客域名：[kite1024.xyz](https://kite1024.xyz)
 
-::github{repo="saicaca/fuwari"}
+## 开源致谢
+
+本站基于开源主题 [Firefly](https://github.com/CuteLeaf/Firefly) 调整，
+Firefly 基于 [Fuwari](https://github.com/saicaca/fuwari) 二次开发。下面是当前个人博客仓库：
+
+::github{repo="ciyuan1234/Kite-Blog"}

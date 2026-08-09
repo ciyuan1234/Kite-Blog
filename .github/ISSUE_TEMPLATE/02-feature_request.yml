@@ -1,41 +1,35 @@
 name: Feature Request
-description: Suggest an idea for this project
+description: 给 KiteBlog 提建议
 title: "[Feature]: "
 labels: ["enhancement"]
 assignees:
-  - CuteLeaf
+  - ciyuan1234
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this feature request!
+        感谢给 KiteBlog 提建议。
   - type: textarea
     id: related-problem
     attributes:
-      label: Is your feature request related to a problem?
-      description: A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+      label: 这个需求解决什么问题？
+      description: 请描述当前不方便的地方。
     validations:
       required: true
   - type: textarea
     id: solution
     attributes:
-      label: Describe the solution you'd like
-      description: A clear and concise description of what you want to happen.
+      label: 你希望怎么实现？
+      description: 请描述你想要的效果。
     validations:
       required: true
   - type: textarea
     id: alternatives
     attributes:
-      label: Describe alternatives you've considered
-      description: A clear and concise description of any alternative solutions or features you've considered.
+      label: 其他方案
+      description: 可选，说明你考虑过的替代方案。
   - type: textarea
     id: additional-context
     attributes:
-      label: Additional context
-      description: Add any other context or screenshots about the feature request here.
-  - type: markdown
-    attributes:
-      value: |
-        **Disclaimer**
-
-        Please note that this feature request is at the discretion of the repository owner, @saicaca, and its implementation is not guaranteed.
+      label: 补充信息
+      description: 可添加截图、参考链接或其他背景。
