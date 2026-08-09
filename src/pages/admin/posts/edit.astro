@@ -19,6 +19,10 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 					<Icon is:inline name="material-symbols:arrow-back-rounded" />
 					文章列表
 				</a>
+				<a href="/admin/categories/" class="edit-button">
+					<Icon is:inline name="material-symbols:category-outline-rounded" />
+					分类
+				</a>
 				<button type="button" data-save class="edit-button primary">
 					<Icon is:inline name="material-symbols:cloud-upload-outline-rounded" />
 					保存
@@ -42,7 +46,8 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 				</label>
 				<label>
 					<span>分类</span>
-					<input name="category" value="随笔" autocomplete="off" />
+					<input name="category" value="随笔" list="category-options" autocomplete="off" />
+					<datalist id="category-options"></datalist>
 				</label>
 				<label>
 					<span>标签</span>
@@ -76,6 +81,7 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 		const statusEl = document.querySelector("[data-status]");
 		const sessionEl = document.querySelector("[data-session-state]");
 		const titleEl = document.querySelector("[data-page-title]");
+		const categoryOptions = document.getElementById("category-options");
 		const params = new URLSearchParams(location.search);
 		const editingSlug = params.get("slug") || "";
 
@@ -115,7 +121,7 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 				title: form.elements.title.value.trim(),
 				slug: form.elements.slug.value.trim(),
 				published: form.elements.published.value || today(),
-				category: form.elements.category.value.trim() || "随笔",
+				category: form.elements.category.value.trim(),
 				tags: form.elements.tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
 				description: form.elements.description.value.trim(),
 				image: form.elements.image.value.trim(),
@@ -128,12 +134,20 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 			form.elements.slug.value = post.slug || editingSlug;
 			form.elements.slug.readOnly = true;
 			form.elements.published.value = post.published || today();
-			form.elements.category.value = post.category || "随笔";
+			form.elements.category.value = post.category || "";
 			form.elements.tags.value = (post.tags || []).join(", ");
 			form.elements.description.value = post.description || "";
 			form.elements.image.value = post.image || "";
 			form.elements.body.value = post.body || "";
 			if (titleEl) titleEl.textContent = `编辑：${post.title || post.slug}`;
+		}
+
+		async function loadCategories() {
+			const payload = await apiRequest("/api/admin/categories");
+			if (!categoryOptions) return;
+			categoryOptions.innerHTML = (payload.categories || [])
+				.map((item) => `<option value="${escapeHtml(item.name)}">${escapeHtml(item.count)} 篇</option>`)
+				.join("");
 		}
 
 		async function checkSession() {
@@ -148,6 +162,7 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 		}
 
 		async function loadPost() {
+			await loadCategories();
 			if (!editingSlug) {
 				form.elements.published.value = today();
 				document.querySelector("[data-delete]").hidden = true;
@@ -181,6 +196,7 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 					history.replaceState(null, "", `/admin/posts/edit/?slug=${encodeURIComponent(post.slug)}`);
 					form.elements.slug.readOnly = true;
 				}
+				await loadCategories();
 				setStatus("已提交到 GitHub。Cloudflare 自动部署完成后，前台文章会更新。", "success");
 			} catch (error) {
 				setStatus(error.message, "error");

@@ -12,7 +12,7 @@ const description = "KiteBlog 网页端内容管理后台。";
 			<div>
 				<p class="admin-kicker">KiteBlog Admin</p>
 				<h1>博客后台</h1>
-				<p>使用 GitHub 登录后，可以在网页端管理文章、头像、背景、首页文案和个人链接。</p>
+				<p>使用 GitHub 登录后，可以管理文章、分类、个人链接、友情链接和站点设置。</p>
 			</div>
 			<div class="admin-actions" data-admin-actions>
 				<a href="/api/auth/github/start" class="admin-button primary">
@@ -73,7 +73,10 @@ const description = "KiteBlog 网页端内容管理后台。";
 					</div>
 					<div class="admin-cards">
 						<a href="/admin/posts/"><strong>文章管理</strong><span>新增、编辑、删除 Markdown 文章</span></a>
-						<a href="/admin/settings/"><strong>站点设置</strong><span>修改头像、背景、文案和链接</span></a>
+						<a href="/admin/categories/"><strong>分类管理</strong><span>重命名分类或清空分类归属</span></a>
+						<a href="/admin/links/"><strong>个人链接</strong><span>管理 GitHub、QQ、邮箱等链接</span></a>
+						<a href="/admin/friends/"><strong>友情链接</strong><span>管理友链卡片和标签</span></a>
+						<a href="/admin/settings/"><strong>站点设置</strong><span>修改头像、背景和首页文案</span></a>
 					</div>`;
 					actions.innerHTML = `<a href="/admin/posts/" class="admin-button primary">管理文章</a>
 						<a href="/admin/settings/" class="admin-button">站点设置</a>
@@ -92,9 +95,11 @@ const description = "KiteBlog 网页端内容管理后台。";
 <style>
 	.admin-shell { display: grid; gap: 1rem; }
 	.admin-hero, .admin-panel {
-		border: 1px solid var(--line-divider); border-radius: 12px;
+		border: 1px solid var(--line-divider);
+		border-radius: 12px;
 		background: color-mix(in oklch, var(--card-bg) 82%, transparent);
-		box-shadow: var(--surface-shadow); backdrop-filter: saturate(1.14) blur(var(--kite-glass-strength, 16px));
+		box-shadow: var(--surface-shadow);
+		backdrop-filter: saturate(1.14) blur(var(--kite-glass-strength, 16px));
 	}
 	.admin-hero { display: flex; justify-content: space-between; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); }
 	.admin-kicker { margin: 0 0 .45rem; color: var(--primary); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
@@ -112,10 +117,10 @@ const description = "KiteBlog 网页端内容管理后台。";
 	.admin-user { display: flex; align-items: center; gap: .8rem; }
 	.admin-user img { width: 3rem; height: 3rem; border-radius: 999px; }
 	.admin-user span { display: block; color: var(--content-meta); }
-	.admin-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin-top: 1rem; }
+	.admin-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: .8rem; margin-top: 1rem; }
 	.admin-cards a { border: 1px solid var(--line-divider); border-radius: 10px; padding: 1rem; text-decoration: none; background: color-mix(in oklch, var(--card-bg) 70%, transparent); }
 	.admin-cards strong { display: block; color: var(--content); }
 	.admin-cards span { display: block; margin-top: .35rem; color: var(--content-meta); }
 	.admin-error { color: oklch(0.56 0.18 25); font-weight: 800; }
-	@media (max-width: 640px) { .admin-hero { flex-direction: column; } .admin-cards { grid-template-columns: 1fr; } }
+	@media (max-width: 640px) { .admin-hero { flex-direction: column; } }
 </style>

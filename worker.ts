@@ -56,6 +56,7 @@ type SiteSettingsInput = {
 	avatarUrl?: string;
 	githubUrl?: string;
 	qqUrl?: string;
+	links?: AdminLinkInput[];
 	wallpaperMode?: "banner" | "fullscreen" | "overlay" | "none";
 	desktopBackgroundUrl?: string[] | string;
 	mobileBackgroundUrl?: string[] | string;
@@ -67,12 +68,30 @@ type SiteSettingsInput = {
 	carouselEnable?: boolean;
 };
 
+type AdminLinkInput = {
+	name?: string;
+	icon?: string;
+	url?: string;
+	showName?: boolean;
+};
+
+type FriendInput = {
+	title?: string;
+	imgurl?: string;
+	desc?: string;
+	siteurl?: string;
+	tags?: string[] | string;
+	weight?: number | string;
+	enabled?: boolean;
+};
+
 const SESSION_COOKIE = "kite_admin_session";
 const STATE_COOKIE = "kite_oauth_state";
 const POST_DIR = "src/content/posts";
 const PROFILE_CONFIG_PATH = "src/config/profileConfig.ts";
 const WALLPAPER_CONFIG_PATH = "src/config/backgroundWallpaper.ts";
 const SITE_CONFIG_PATH = "src/config/siteConfig.ts";
+const FRIENDS_CONFIG_PATH = "src/config/friendsConfig.ts";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 const jsonHeaders = {
@@ -297,6 +316,181 @@ function extractConfigValue(source: string, key: string) {
 	return allQuotedStrings(match[1]);
 }
 
+function extractArrayBlock(source: string, key: string) {
+	const start = source.indexOf(`${key}: [`);
+	if (start < 0) return "";
+	const bracketStart = source.indexOf("[", start);
+	let depth = 0;
+	for (let index = bracketStart; index < source.length; index++) {
+		const char = source[index];
+		if (char === "[") depth++;
+		if (char === "]") depth--;
+		if (depth === 0) return source.slice(bracketStart, index + 1);
+	}
+	return "";
+}
+
+function extractObjects(arraySource: string) {
+	const objects: string[] = [];
+	let depth = 0;
+	let start = -1;
+	for (let index = 0; index < arraySource.length; index++) {
+		const char = arraySource[index];
+		if (char === "{") {
+			if (depth === 0) start = index;
+			depth++;
+		}
+		if (char === "}") {
+			depth--;
+			if (depth === 0 && start >= 0)
+				objects.push(arraySource.slice(start, index + 1));
+		}
+	}
+	return objects;
+}
+
+function propString(source: string, key: string, fallback = "") {
+	return firstStringMatch(
+		source,
+		new RegExp(`\\b${key}:\\s*"([^"]*)"`),
+		fallback,
+	);
+}
+
+function propBoolean(source: string, key: string, fallback = false) {
+	const value = firstStringMatch(
+		source,
+		new RegExp(`\\b${key}:\\s*(true|false)`),
+		String(fallback),
+	);
+	return value === "true";
+}
+
+function propNumber(source: string, key: string, fallback = 0) {
+	const value = Number(
+		firstStringMatch(
+			source,
+			new RegExp(`\\b${key}:\\s*(-?\\d+)`),
+			String(fallback),
+		),
+	);
+	return Number.isFinite(value) ? value : fallback;
+}
+
+function propArray(source: string, key: string) {
+	const match = source.match(new RegExp(`\\b${key}:\\s*(\\[[\\s\\S]*?\\])`));
+	return match ? allQuotedStrings(match[1]) : [];
+}
+
+function normalizeAdminLinks(value: unknown) {
+	const raw = Array.isArray(value) ? value : [];
+	const links = raw
+		.map((item) => item as AdminLinkInput)
+		.map((item) => ({
+			name: cleanText(item.name, "", 40),
+			icon: cleanText(item.icon, "material-symbols:link-rounded", 120),
+			url: cleanText(item.url, "", 2048),
+			showName: booleanValue(item.showName, false),
+		}))
+		.filter((item) => item.name && item.url)
+		.slice(0, 12);
+	return links.length
+		? links
+		: [
+				{
+					name: "GitHub",
+					icon: "fa7-brands:github",
+					url: "https://github.com/ciyuan1234",
+					showName: false,
+				},
+				{ name: "RSS", icon: "fa7-solid:rss", url: "/rss/", showName: false },
+			];
+}
+
+function parseProfileLinks(profileSource: string) {
+	return normalizeAdminLinks(
+		extractObjects(extractArrayBlock(profileSource, "links")).map((item) => ({
+			name: propString(item, "name"),
+			icon: propString(item, "icon"),
+			url: propString(item, "url"),
+			showName: propBoolean(item, "showName", false),
+		})),
+	);
+}
+
+function tsLinks(values: ReturnType<typeof normalizeAdminLinks>) {
+	return values
+		.map(
+			(item) =>
+				`\t\t{\n\t\t\tname: ${tsString(item.name)},\n\t\t\ticon: ${tsString(item.icon)},\n\t\t\turl: ${tsString(item.url)},\n\t\t\tshowName: ${item.showName},\n\t\t}`,
+		)
+		.join(",\n");
+}
+
+function normalizeFriends(value: unknown) {
+	const raw = Array.isArray(value) ? value : [];
+	return raw
+		.map((item) => item as FriendInput)
+		.map((item) => ({
+			title: cleanText(item.title, "", 80),
+			imgurl: cleanText(item.imgurl, "", 2048),
+			desc: cleanText(item.desc, "", 180),
+			siteurl: cleanText(item.siteurl, "", 2048),
+			tags: normalizeTags(item.tags),
+			weight: clampNumber(item.weight, 0, -9999, 9999),
+			enabled: booleanValue(item.enabled, true),
+		}))
+		.filter((item) => item.title && item.siteurl)
+		.slice(0, 80);
+}
+
+function parseFriends(source: string) {
+	return normalizeFriends(
+		extractObjects(extractArrayBlock(source, "friendsConfig")).map((item) => ({
+			title: propString(item, "title"),
+			imgurl: propString(item, "imgurl"),
+			desc: propString(item, "desc"),
+			siteurl: propString(item, "siteurl"),
+			tags: propArray(item, "tags"),
+			weight: propNumber(item, "weight", 0),
+			enabled: propBoolean(item, "enabled", true),
+		})),
+	);
+}
+
+function buildFriendsConfig(friends: ReturnType<typeof normalizeFriends>) {
+	const friendItems = friends
+		.map(
+			(item) =>
+				`\t{\n\t\ttitle: ${tsString(item.title)},\n\t\timgurl: ${tsString(item.imgurl)},\n\t\tdesc: ${tsString(item.desc)},\n\t\tsiteurl: ${tsString(item.siteurl)},\n\t\ttags: ${JSON.stringify(item.tags)},\n\t\tweight: ${item.weight},\n\t\tenabled: ${item.enabled},\n\t}`,
+		)
+		.join(",\n");
+	return `import type { FriendLink, FriendsPageConfig } from "../types/friendsConfig";
+
+export const friendsPageConfig: FriendsPageConfig = {
+\ttitle: "",
+\tdescription: "",
+\tshowCustomContent: true,
+\tshowComment: true,
+\trandomizeSort: false,
+};
+
+export const friendsConfig: FriendLink[] = [
+${friendItems}
+];
+
+export const getEnabledFriends = (): FriendLink[] => {
+\tconst friends = friendsConfig.filter((friend) => friend.enabled);
+
+\tif (friendsPageConfig.randomizeSort) {
+\t\treturn friends.sort(() => Math.random() - 0.5);
+\t}
+
+\treturn friends.sort((a, b) => b.weight - a.weight);
+};
+`;
+}
+
 function normalizePostInput(input: PostInput) {
 	const title = cleanText(input.title, "未命名文章", 160);
 	const slug = sanitizeSlug(input.slug || title);
@@ -365,6 +559,37 @@ function normalizeSiteSettings(input: SiteSettingsInput) {
 		10,
 	);
 	const playerUrl = cleanText(input.playerUrl, "", 2048);
+	const links = normalizeAdminLinks(
+		(input as SiteSettingsInput & { links?: unknown }).links,
+	);
+	const hasExplicitLinks = Array.isArray(
+		(input as SiteSettingsInput & { links?: unknown }).links,
+	);
+	const nextLinks = hasExplicitLinks
+		? links
+		: normalizeAdminLinks([
+				{
+					name: "GitHub",
+					icon: "fa7-brands:github",
+					url: cleanText(
+						input.githubUrl,
+						"https://github.com/ciyuan1234",
+						2048,
+					),
+					showName: false,
+				},
+				...(cleanText(input.qqUrl, "", 2048)
+					? [
+							{
+								name: "QQ",
+								icon: "fa7-brands:qq",
+								url: cleanText(input.qqUrl, "", 2048),
+								showName: false,
+							},
+						]
+					: []),
+				{ name: "RSS", icon: "fa7-solid:rss", url: "/rss/", showName: false },
+			]);
 	return {
 		siteTitle: cleanText(input.siteTitle, "KiteBlog", 80),
 		siteSubtitle: cleanText(
@@ -385,6 +610,7 @@ function normalizeSiteSettings(input: SiteSettingsInput) {
 			2048,
 		),
 		qqUrl: cleanText(input.qqUrl, "", 2048),
+		links: nextLinks,
 		wallpaperMode: ["banner", "fullscreen", "overlay", "none"].includes(
 			String(input.wallpaperMode),
 		)
@@ -424,6 +650,7 @@ function parseSiteSettings(
 			/\bname:\s*"QQ"[\s\S]*?\burl:\s*"([^"]*)"/,
 			"",
 		),
+		links: parseProfileLinks(profileSource),
 		wallpaperMode: firstStringMatch(
 			wallpaperSource,
 			/\bmode:\s*"(banner|fullscreen|overlay|none)"/,
@@ -455,9 +682,6 @@ function tsArray(values: string[]) {
 function buildProfileConfig(
 	settings: ReturnType<typeof normalizeSiteSettings>,
 ) {
-	const qqLink = settings.qqUrl
-		? `\n\t\t{\n\t\t\tname: "QQ",\n\t\t\ticon: "fa7-brands:qq",\n\t\t\turl: ${tsString(settings.qqUrl)},\n\t\t\tshowName: false,\n\t\t},`
-		: "";
 	return `import type { ProfileConfig } from "../types/profileConfig";
 
 export const profileConfig: ProfileConfig = {
@@ -465,18 +689,7 @@ export const profileConfig: ProfileConfig = {
 \tname: ${tsString(settings.profileName)},
 \tbio: ${tsString(settings.profileBio)},
 \tlinks: [
-\t\t{
-\t\t\tname: "GitHub",
-\t\t\ticon: "fa7-brands:github",
-\t\t\turl: ${tsString(settings.githubUrl)},
-\t\t\tshowName: false,
-\t\t},${qqLink}
-\t\t{
-\t\t\tname: "RSS",
-\t\t\ticon: "fa7-solid:rss",
-\t\t\turl: "/rss/",
-\t\t\tshowName: false,
-\t\t},
+${tsLinks(settings.links)}
 \t],
 };
 `;
@@ -605,9 +818,20 @@ async function githubFetch(env: Env, path: string, init: RequestInit = {}) {
 	const text = await response.text();
 	const payload = text ? JSON.parse(text) : null;
 	if (!response.ok) {
-		throw new Error(
+		const message = String(
 			payload?.message || `GitHub request failed: ${response.status}`,
 		);
+		if (message.includes("Resource not accessible by personal access token")) {
+			throw new Error(
+				"GITHUB_REPO_TOKEN 没有仓库内容读写权限。请在 GitHub 重新生成 token，并给 ciyuan1234/Kite-Blog 设置 Contents: Read and write。",
+			);
+		}
+		if (response.status === 401 || response.status === 403) {
+			throw new Error(
+				`GitHub API 权限不足：${message}。请检查 Cloudflare Secret 里的 GITHUB_REPO_TOKEN。`,
+			);
+		}
+		throw new Error(message);
 	}
 	return payload;
 }
@@ -973,6 +1197,157 @@ async function handleAdminSettings(request: Request, env: Env) {
 	return json({ ok: false, error: "Method not allowed." }, { status: 405 });
 }
 
+async function getPostEntries(env: Env) {
+	const files = await listGitHubPostFiles(env);
+	const entries = await Promise.all(
+		files.map(async (file) => {
+			const full = await getGitHubFile(env, file.path);
+			return {
+				...file,
+				content: full.content,
+				sha: full.sha,
+				parsed: parseFrontmatter(full.content),
+			};
+		}),
+	);
+	return entries;
+}
+
+function categorySummary(entries: Awaited<ReturnType<typeof getPostEntries>>) {
+	const counts = new Map<string, number>();
+	for (const entry of entries) {
+		const category = cleanText(entry.parsed.category, "", 80);
+		if (!category) continue;
+		counts.set(category, (counts.get(category) || 0) + 1);
+	}
+	return Array.from(counts.entries())
+		.map(([name, count]) => ({ name, count }))
+		.sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN"));
+}
+
+async function handleAdminCategories(
+	request: Request,
+	env: Env,
+	name?: string,
+) {
+	const session = await requireSession(request, env);
+	if (!session)
+		return json({ ok: false, error: "Unauthorized." }, { status: 401 });
+
+	const entries = await getPostEntries(env);
+	if (request.method === "GET" && !name) {
+		return json({ ok: true, categories: categorySummary(entries) });
+	}
+
+	if (request.method === "PUT" && name) {
+		const body = (await request.json().catch(() => null)) as {
+			name?: string;
+		} | null;
+		const oldName = cleanText(name, "", 80);
+		const newName = cleanText(body?.name, "", 80);
+		if (!oldName || !newName) {
+			return json({ ok: false, error: "分类名称不能为空。" }, { status: 400 });
+		}
+		const targets = entries.filter(
+			(entry) => entry.parsed.category === oldName,
+		);
+		await Promise.all(
+			targets.map((entry) => {
+				const next = buildMarkdown({ ...entry.parsed, category: newName });
+				return commitGitHubFile(
+					env,
+					entry.path,
+					next,
+					`category: rename ${oldName} to ${newName}`,
+					entry.sha,
+				);
+			}),
+		);
+		return json({ ok: true, updated: targets.length });
+	}
+
+	if (request.method === "DELETE" && name) {
+		const oldName = cleanText(name, "", 80);
+		const targets = entries.filter(
+			(entry) => entry.parsed.category === oldName,
+		);
+		await Promise.all(
+			targets.map((entry) => {
+				const next = buildMarkdown({ ...entry.parsed, category: "" });
+				return commitGitHubFile(
+					env,
+					entry.path,
+					next,
+					`category: clear ${oldName}`,
+					entry.sha,
+				);
+			}),
+		);
+		return json({ ok: true, updated: targets.length });
+	}
+
+	return json({ ok: false, error: "Method not allowed." }, { status: 405 });
+}
+
+async function handleAdminLinks(request: Request, env: Env) {
+	const session = await requireSession(request, env);
+	if (!session)
+		return json({ ok: false, error: "Unauthorized." }, { status: 401 });
+	const [profileFile, wallpaperFile, siteFile] = await Promise.all([
+		getGitHubFile(env, PROFILE_CONFIG_PATH),
+		getGitHubFile(env, WALLPAPER_CONFIG_PATH),
+		getGitHubFile(env, SITE_CONFIG_PATH),
+	]);
+	if (request.method === "GET") {
+		return json({ ok: true, links: parseProfileLinks(profileFile.content) });
+	}
+	if (request.method === "PUT") {
+		const body = (await request.json().catch(() => null)) as {
+			links?: unknown;
+		} | null;
+		const settings = parseSiteSettings(
+			profileFile.content,
+			wallpaperFile.content,
+			siteFile.content,
+		);
+		settings.links = normalizeAdminLinks(body?.links);
+		await commitGitHubFile(
+			env,
+			PROFILE_CONFIG_PATH,
+			buildProfileConfig(settings),
+			"config: update profile links",
+			profileFile.sha,
+		);
+		return json({ ok: true, links: settings.links });
+	}
+	return json({ ok: false, error: "Method not allowed." }, { status: 405 });
+}
+
+async function handleAdminFriends(request: Request, env: Env) {
+	const session = await requireSession(request, env);
+	if (!session)
+		return json({ ok: false, error: "Unauthorized." }, { status: 401 });
+	const file = await getGitHubFile(env, FRIENDS_CONFIG_PATH);
+	if (request.method === "GET") {
+		return json({ ok: true, friends: parseFriends(file.content) });
+	}
+	if (request.method === "PUT") {
+		const body = (await request.json().catch(() => null)) as {
+			friends?: unknown;
+		} | null;
+		const friends = normalizeFriends(body?.friends);
+		await commitGitHubFile(
+			env,
+			FRIENDS_CONFIG_PATH,
+			buildFriendsConfig(friends),
+			"config: update friend links",
+			file.sha,
+		);
+		return json({ ok: true, friends });
+	}
+	return json({ ok: false, error: "Method not allowed." }, { status: 405 });
+}
+
 async function handleApi(request: Request, env: Env) {
 	const url = new URL(request.url);
 	const pathname = url.pathname.replace(/\/$/, "");
@@ -1002,12 +1377,25 @@ async function handleApi(request: Request, env: Env) {
 			return await handleAdminPosts(request, env);
 		if (pathname === "/api/admin/settings")
 			return await handleAdminSettings(request, env);
+		if (pathname === "/api/admin/categories")
+			return await handleAdminCategories(request, env);
+		if (pathname === "/api/admin/links")
+			return await handleAdminLinks(request, env);
+		if (pathname === "/api/admin/friends")
+			return await handleAdminFriends(request, env);
 		const postMatch = pathname.match(/^\/api\/admin\/posts\/([^/]+)$/);
 		if (postMatch)
 			return await handleAdminPosts(
 				request,
 				env,
 				decodeURIComponent(postMatch[1]),
+			);
+		const categoryMatch = pathname.match(/^\/api\/admin\/categories\/([^/]+)$/);
+		if (categoryMatch)
+			return await handleAdminCategories(
+				request,
+				env,
+				decodeURIComponent(categoryMatch[1]),
 			);
 		return json({ ok: false, error: "API route not found." }, { status: 404 });
 	} catch (error) {

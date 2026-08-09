@@ -19,14 +19,10 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 					<Icon is:inline name="material-symbols:add-circle-outline-rounded" />
 					新建文章
 				</a>
-				<a href="/admin/settings/" class="posts-button">
-					<Icon is:inline name="material-symbols:tune-rounded" />
-					设置
-				</a>
-				<a href="/admin/" class="posts-button">
-					<Icon is:inline name="material-symbols:dashboard-outline-rounded" />
-					后台
-				</a>
+				<a href="/admin/categories/" class="posts-button">分类</a>
+				<a href="/admin/links/" class="posts-button">个人链接</a>
+				<a href="/admin/friends/" class="posts-button">友链</a>
+				<a href="/admin/settings/" class="posts-button">设置</a>
 			</div>
 		</header>
 
@@ -84,7 +80,7 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 				<div class="post-main">
 					<strong>${escapeHtml(post.title || post.slug)}</strong>
 					<p>${escapeHtml(post.description || "暂无摘要")}</p>
-					<span>${escapeHtml(post.published || "未设置日期")} · ${escapeHtml(post.category || "随笔")} · ${escapeHtml((post.tags || []).join(", ") || "无标签")}</span>
+					<span>${escapeHtml(post.published || "未设置日期")} · ${escapeHtml(post.category || "未分类")} · ${escapeHtml((post.tags || []).join(", ") || "无标签")}</span>
 				</div>
 				<div class="item-actions">
 					<a href="/posts/${encodeURIComponent(post.slug)}/" target="_blank" rel="noreferrer">查看</a>
@@ -158,10 +154,7 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 	.item-actions button { color: oklch(0.56 0.18 25); }
 	.posts-panel { padding: 1rem; }
 	.toolbar { margin-bottom: 1rem; }
-	.toolbar input {
-		flex: 1; min-width: 14rem; border: 1px solid var(--line-divider); border-radius: 8px;
-		padding: .75rem .85rem; color: inherit; background: color-mix(in oklch, var(--card-bg) 70%, transparent);
-	}
+	.toolbar input { flex: 1; min-width: 14rem; border: 1px solid var(--line-divider); border-radius: 8px; padding: .75rem .85rem; color: inherit; background: color-mix(in oklch, var(--card-bg) 70%, transparent); }
 	.post-list { display: grid; gap: .8rem; }
 	.post-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; padding: 1rem; }
 	.post-main { min-width: 0; }

@@ -1,0 +1,138 @@
+---
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+const title = "个人链接";
+const description = "管理个人卡片上的社交链接。";
+---
+
+<MainGridLayout title={title} description={description}>
+	<section class="links-shell">
+		<header class="header">
+			<div>
+				<p class="eyebrow">Profile Links</p>
+				<h1>个人链接</h1>
+				<p data-session-state>正在检查登录状态...</p>
+			</div>
+			<div class="actions">
+				<a href="/admin/" class="button">后台</a>
+				<a href="/admin/settings/" class="button">设置</a>
+			</div>
+		</header>
+
+		<form class="panel" data-form hidden>
+			<div class="toolbar">
+				<button type="button" class="button" data-add>添加链接</button>
+				<button type="submit" class="button primary">保存到 GitHub</button>
+			</div>
+			<div class="rows" data-rows></div>
+			<p data-status>等待操作。</p>
+		</form>
+	</section>
+
+	<script is:inline>
+		const stateEl = document.querySelector("[data-session-state]");
+		const form = document.querySelector("[data-form]");
+		const rowsEl = document.querySelector("[data-rows]");
+		const statusEl = document.querySelector("[data-status]");
+		let links = [];
+
+		function escapeHtml(value) {
+			return String(value || "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+		}
+		async function apiRequest(url, options = {}) {
+			const headers = new Headers(options.headers || {});
+			if (options.body) headers.set("Content-Type", "application/json");
+			const response = await fetch(url, { ...options, headers, cache: "no-store" });
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || payload.ok === false) throw new Error(payload.error || `请求失败：${response.status}`);
+			return payload;
+		}
+		function setStatus(message, error = false) {
+			statusEl.textContent = message;
+			statusEl.classList.toggle("error", error);
+		}
+		function render() {
+			rowsEl.innerHTML = links.map((link, index) => `<article class="row" data-index="${index}">
+				<label><span>名称</span><input data-key="name" value="${escapeHtml(link.name)}" /></label>
+				<label><span>图标</span><input data-key="icon" value="${escapeHtml(link.icon)}" placeholder="fa7-brands:github" /></label>
+				<label class="wide"><span>URL</span><input data-key="url" value="${escapeHtml(link.url)}" /></label>
+				<label class="check"><input type="checkbox" data-key="showName" ${link.showName ? "checked" : ""} /><span>显示名称</span></label>
+				<button type="button" class="danger" data-remove="${index}">删除</button>
+			</article>`).join("");
+		}
+		function collect() {
+			return Array.from(rowsEl.querySelectorAll(".row")).map((row) => {
+				const read = (key) => row.querySelector(`[data-key="${key}"]`);
+				return {
+					name: read("name").value.trim(),
+					icon: read("icon").value.trim(),
+					url: read("url").value.trim(),
+					showName: read("showName").checked,
+				};
+			}).filter((item) => item.name && item.url);
+		}
+		async function load() {
+			try {
+				const session = await apiRequest("/api/admin/session");
+				if (!session.authenticated) {
+					stateEl.innerHTML = '<a href="/api/auth/github/start">使用 GitHub 登录</a>';
+					return;
+				}
+				stateEl.textContent = `已登录：@${session.user.login}`;
+				const payload = await apiRequest("/api/admin/links");
+				links = payload.links || [];
+				render();
+				form.hidden = false;
+			} catch (error) {
+				setStatus(error.message, true);
+			}
+		}
+		document.querySelector("[data-add]")?.addEventListener("click", () => {
+			links = collect();
+			links.push({ name: "", icon: "material-symbols:link-rounded", url: "", showName: false });
+			render();
+		});
+		rowsEl.addEventListener("click", (event) => {
+			const index = event.target.closest("[data-remove]")?.getAttribute("data-remove");
+			if (index === null || index === undefined) return;
+			links = collect().filter((_, itemIndex) => itemIndex !== Number(index));
+			render();
+		});
+		form.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			setStatus("正在提交到 GitHub...");
+			try {
+				const payload = await apiRequest("/api/admin/links", { method: "PUT", body: JSON.stringify({ links: collect() }) });
+				links = payload.links || [];
+				render();
+				setStatus("已提交到 GitHub，等待 Cloudflare 部署后生效。");
+			} catch (error) {
+				setStatus(error.message, true);
+			}
+		});
+		load();
+	</script>
+</MainGridLayout>
+
+<style>
+	.links-shell { display: grid; gap: 1rem; }
+	.header, .panel, .row { border: 1px solid var(--line-divider); border-radius: 12px; background: color-mix(in oklch, var(--card-bg) 82%, transparent); box-shadow: var(--surface-shadow); }
+	.header { display: flex; justify-content: space-between; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); }
+	.eyebrow { margin: 0 0 .45rem; color: var(--primary); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+	h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3rem); letter-spacing: 0; }
+	.header p, .panel p { color: var(--content-meta); }
+	.panel { padding: 1rem; }
+	.toolbar, .actions { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; justify-content: space-between; }
+	.rows { display: grid; gap: .75rem; margin: 1rem 0; }
+	.row { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; padding: 1rem; }
+	.wide { grid-column: 1 / -1; }
+	label { display: grid; gap: .35rem; }
+	label span { color: var(--content-meta); font-weight: 800; font-size: .84rem; }
+	input { width: 100%; border: 1px solid var(--line-divider); border-radius: 8px; padding: .7rem .8rem; background: color-mix(in oklch, var(--card-bg) 70%, transparent); color: inherit; }
+	.check { display: flex; align-items: center; gap: .5rem; }
+	.check input { width: 1rem; }
+	.button, button { min-height: 2.4rem; border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider)); border-radius: 8px; padding: .55rem .75rem; color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, transparent); font-weight: 800; text-decoration: none; cursor: pointer; }
+	.primary { color: white; background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22)); }
+	.danger, .error { color: oklch(0.56 0.18 25) !important; }
+	@media (max-width: 720px) { .header { flex-direction: column; } .row { grid-template-columns: 1fr; } .wide { grid-column: auto; } }
+</style>
