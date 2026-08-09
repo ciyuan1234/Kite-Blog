@@ -982,23 +982,34 @@ async function handleApi(request: Request, env: Env) {
 			);
 		}
 		if (pathname === "/api/auth/github/start")
-			return handleOAuthStart(request, env);
+			return await handleOAuthStart(request, env);
 		if (pathname === "/api/auth/github/callback")
-			return handleOAuthCallback(request, env);
+			return await handleOAuthCallback(request, env);
 		if (pathname === "/api/auth/logout") return logout();
-		if (pathname === "/api/admin/session") return handleSession(request, env);
-		if (pathname === "/api/admin/posts") return handleAdminPosts(request, env);
+		if (pathname === "/api/admin/session")
+			return await handleSession(request, env);
+		if (pathname === "/api/admin/posts")
+			return await handleAdminPosts(request, env);
 		if (pathname === "/api/admin/settings")
-			return handleAdminSettings(request, env);
+			return await handleAdminSettings(request, env);
 		const postMatch = pathname.match(/^\/api\/admin\/posts\/([^/]+)$/);
 		if (postMatch)
-			return handleAdminPosts(request, env, decodeURIComponent(postMatch[1]));
+			return await handleAdminPosts(
+				request,
+				env,
+				decodeURIComponent(postMatch[1]),
+			);
 		return json({ ok: false, error: "API route not found." }, { status: 404 });
 	} catch (error) {
+		const message =
+			error instanceof Error ? error.message : "Unknown server error.";
+		if (pathname.startsWith("/api/auth/github/")) {
+			return redirect(`/admin/?error=${encodeURIComponent(message)}`);
+		}
 		return json(
 			{
 				ok: false,
-				error: error instanceof Error ? error.message : "Unknown error.",
+				error: message,
 			},
 			{ status: 500 },
 		);
