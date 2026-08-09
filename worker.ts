@@ -2,13 +2,22 @@ type Env = {
 	ASSETS: {
 		fetch: (request: Request) => Promise<Response>;
 	};
+	GITHUB_CLIENT_ID?: string;
+	GITHUB_CLIENT_SECRET?: string;
 	GITHUB_REPO_TOKEN?: string;
 	GITHUB_REPO_OWNER?: string;
 	GITHUB_REPO_NAME?: string;
 	GITHUB_REPO_BRANCH?: string;
-	ADMIN_PASSWORD?: string;
+	ADMIN_GITHUB_LOGIN?: string;
 	SESSION_SECRET?: string;
 	PUBLIC_SITE_URL?: string;
+};
+
+type GitHubUser = {
+	id: number;
+	login: string;
+	name?: string;
+	avatar_url?: string;
 };
 
 type AdminSession = {
@@ -58,6 +67,7 @@ type SiteSettingsInput = {
 };
 
 const SESSION_COOKIE = "kite_admin_session";
+const STATE_COOKIE = "kite_oauth_state";
 const POST_DIR = "src/content/posts";
 const PROFILE_CONFIG_PATH = "src/config/profileConfig.ts";
 const WALLPAPER_CONFIG_PATH = "src/config/backgroundWallpaper.ts";
@@ -94,6 +104,7 @@ function repoConfig(env: Env) {
 		owner: env.GITHUB_REPO_OWNER || "ciyuan1234",
 		repo: env.GITHUB_REPO_NAME || "Kite-Blog",
 		branch: env.GITHUB_REPO_BRANCH || "main",
+		adminLogin: env.ADMIN_GITHUB_LOGIN || "ciyuan1234",
 	};
 }
 
@@ -196,7 +207,9 @@ async function readSession(request: Request, env: Env) {
 
 async function requireSession(request: Request, env: Env) {
 	const session = await readSession(request, env);
-	return session;
+	if (!session) return null;
+	const { adminLogin } = repoConfig(env);
+	return session.login === adminLogin ? session : null;
 }
 
 function sanitizeSlug(value: string) {
@@ -667,46 +680,91 @@ async function deleteGitHubFile(
 	);
 }
 
-async function handlePasswordLogin(request: Request, env: Env) {
-	if (request.method === "OPTIONS") return new Response(null, { status: 204 });
-	if (request.method !== "POST") {
-		return json({ ok: false, error: "Method not allowed." }, { status: 405 });
-	}
-	const expectedPassword = getRequiredEnv(env, "ADMIN_PASSWORD");
+async function handleOAuthStart(request: Request, env: Env) {
+	const clientId = getRequiredEnv(env, "GITHUB_CLIENT_ID");
+	getRequiredEnv(env, "GITHUB_CLIENT_SECRET");
 	getRequiredEnv(env, "SESSION_SECRET");
-	const body = (await request.json().catch(() => null)) as {
-		password?: string;
-	} | null;
-	const password = String(body?.password || "");
-	if (!password || password !== expectedPassword) {
-		return json({ ok: false, error: "后台密码错误。" }, { status: 401 });
+	const origin = env.PUBLIC_SITE_URL || new URL(request.url).origin;
+	const state = crypto.randomUUID();
+	const authUrl = new URL("https://github.com/login/oauth/authorize");
+	authUrl.searchParams.set("client_id", clientId);
+	authUrl.searchParams.set(
+		"redirect_uri",
+		`${origin}/api/auth/github/callback`,
+	);
+	authUrl.searchParams.set("scope", "read:user");
+	authUrl.searchParams.set("state", state);
+	return redirect(authUrl.toString(), {
+		"Set-Cookie": cookie(STATE_COOKIE, state, 600),
+	});
+}
+
+async function handleOAuthCallback(request: Request, env: Env) {
+	const url = new URL(request.url);
+	const code = url.searchParams.get("code") || "";
+	const state = url.searchParams.get("state") || "";
+	if (!code || !state || state !== getCookie(request, STATE_COOKIE)) {
+		return redirect("/admin/?error=oauth_state");
 	}
-	const session: AdminSession = {
-		id: 1,
-		login: "admin",
-		name: "KiteBlog Admin",
-		avatarUrl: "",
-		exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
-	};
-	return json(
+
+	const origin = env.PUBLIC_SITE_URL || url.origin;
+	const tokenResponse = await fetch(
+		"https://github.com/login/oauth/access_token",
 		{
-			ok: true,
-			user: {
-				login: session.login,
-				name: session.name,
-				avatarUrl: session.avatarUrl,
-			},
-		},
-		{
+			method: "POST",
 			headers: {
-				"Set-Cookie": cookie(
-					SESSION_COOKIE,
-					await signSession(env, session),
-					SESSION_TTL_SECONDS,
-				),
+				Accept: "application/json",
+				"Content-Type": "application/json",
 			},
+			body: JSON.stringify({
+				client_id: getRequiredEnv(env, "GITHUB_CLIENT_ID"),
+				client_secret: getRequiredEnv(env, "GITHUB_CLIENT_SECRET"),
+				code,
+				redirect_uri: `${origin}/api/auth/github/callback`,
+			}),
 		},
 	);
+	const tokenPayload = (await tokenResponse.json()) as {
+		access_token?: string;
+		error_description?: string;
+	};
+	if (!tokenResponse.ok || !tokenPayload.access_token) {
+		return redirect(
+			`/admin/?error=${encodeURIComponent(tokenPayload.error_description || "oauth_token")}`,
+		);
+	}
+
+	const userResponse = await fetch("https://api.github.com/user", {
+		headers: {
+			Accept: "application/vnd.github+json",
+			Authorization: `Bearer ${tokenPayload.access_token}`,
+			"User-Agent": "KiteBlog-Admin",
+		},
+	});
+	const user = (await userResponse.json()) as GitHubUser;
+	const { adminLogin } = repoConfig(env);
+	if (!userResponse.ok || user.login !== adminLogin) {
+		return redirect("/admin/?error=forbidden");
+	}
+
+	const session: AdminSession = {
+		id: user.id,
+		login: user.login,
+		name: user.name || user.login,
+		avatarUrl: user.avatar_url || "",
+		exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+	};
+	const headers = new Headers({ Location: "/admin/posts/" });
+	headers.append(
+		"Set-Cookie",
+		cookie(
+			SESSION_COOKIE,
+			await signSession(env, session),
+			SESSION_TTL_SECONDS,
+		),
+	);
+	headers.append("Set-Cookie", cookie(STATE_COOKIE, "", 0));
+	return new Response(null, { status: 302, headers });
 }
 
 async function handleSession(request: Request, env: Env) {
@@ -923,16 +981,10 @@ async function handleApi(request: Request, env: Env) {
 				{ status: 410 },
 			);
 		}
-		if (pathname === "/api/auth/login")
-			return await handlePasswordLogin(request, env);
-		if (
-			pathname === "/api/auth/github/start" ||
-			pathname === "/api/auth/github/callback"
-		) {
-			return redirect(
-				"/admin/?error=GitHub%20OAuth%20login%20has%20been%20replaced%20by%20password%20login.",
-			);
-		}
+		if (pathname === "/api/auth/github/start")
+			return await handleOAuthStart(request, env);
+		if (pathname === "/api/auth/github/callback")
+			return await handleOAuthCallback(request, env);
 		if (pathname === "/api/auth/logout") return logout();
 		if (pathname === "/api/admin/session")
 			return await handleSession(request, env);
@@ -951,10 +1003,7 @@ async function handleApi(request: Request, env: Env) {
 	} catch (error) {
 		const message =
 			error instanceof Error ? error.message : "Unknown server error.";
-		if (
-			pathname === "/api/auth/github/start" ||
-			pathname === "/api/auth/github/callback"
-		) {
+		if (pathname.startsWith("/api/auth/github/")) {
 			return redirect(`/admin/?error=${encodeURIComponent(message)}`);
 		}
 		return json(

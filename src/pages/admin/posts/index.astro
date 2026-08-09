@@ -102,10 +102,10 @@ const description = "KiteBlog 文章新增、编辑和删除。";
 				const session = await apiRequest("/api/admin/session");
 				if (!session.authenticated) {
 					stateEl.textContent = "未登录。";
-					listEl.innerHTML = '<a class="login-link" href="/admin/">返回后台登录</a>';
+					listEl.innerHTML = '<a class="login-link" href="/api/auth/github/start">使用 GitHub 登录</a>';
 					return;
 				}
-				stateEl.textContent = `已登录：${session.user.name || session.user.login}`;
+				stateEl.textContent = `已登录：@${session.user.login}`;
 				const payload = await apiRequest("/api/admin/posts");
 				posts = payload.posts || [];
 				renderPosts();

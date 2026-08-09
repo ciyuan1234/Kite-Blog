@@ -21,11 +21,11 @@ slug: welcome
 - RSS 和 Sitemap
 - 背景轮播、主题切换、布局切换
 - 音乐播放器
-- 后台密码登录的网页端后台
+- GitHub 登录的网页端后台
 
 ## 如何发布文章
 
-打开 `/admin/`，输入后台密码后即可新增、编辑和删除文章。后台会把文章提交到 GitHub 仓库中的 `src/content/posts`，Cloudflare 自动重新部署后，文章会进入首页、归档、RSS 和搜索索引。
+打开 `/admin/`，使用 GitHub 登录后即可新增、编辑和删除文章。后台会把文章提交到 GitHub 仓库中的 `src/content/posts`，Cloudflare 自动重新部署后，文章会进入首页、归档、RSS 和搜索索引。
 
 图片请使用外链 URL，例如图床、GitHub raw 或 Cloudflare R2 的公开链接。
 

@@ -137,11 +137,11 @@ const description = "KiteBlog 网页端文章编辑器。";
 		async function checkSession() {
 			const payload = await apiRequest("/api/admin/session");
 			if (!payload.authenticated) {
-				if (sessionEl) sessionEl.innerHTML = '<a href="/admin/">返回后台登录</a>';
+				if (sessionEl) sessionEl.innerHTML = '<a href="/api/auth/github/start">使用 GitHub 登录</a>';
 				form.hidden = true;
 				return false;
 			}
-			if (sessionEl) sessionEl.textContent = `已登录：${payload.user.name || payload.user.login}`;
+			if (sessionEl) sessionEl.textContent = `已登录：@${payload.user.login}`;
 			return true;
 		}
 
