@@ -3,16 +3,16 @@ import { Icon } from "astro-icon/components";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 
 const title = "KiteBlog 后台";
-const description = "KiteBlog 的网页端文章管理后台。";
+const description = "KiteBlog 网页端内容管理后台。";
 ---
 
 <MainGridLayout title={title} description={description}>
 	<section class="admin-shell">
-		<div class="admin-hero">
+		<header class="admin-hero">
 			<div>
 				<p class="admin-kicker">KiteBlog Admin</p>
 				<h1>博客后台</h1>
-				<p>登录 GitHub 后，可以直接在网页端新增、编辑和删除文章。</p>
+				<p>使用 GitHub 登录后，可以在网页端管理文章、头像、背景、首页文案和个人链接。</p>
 			</div>
 			<div class="admin-actions" data-admin-actions>
 				<a href="/api/auth/github/start" class="admin-button primary">
@@ -20,7 +20,7 @@ const description = "KiteBlog 的网页端文章管理后台。";
 					GitHub 登录
 				</a>
 			</div>
-		</div>
+		</header>
 
 		<div class="admin-panel" data-admin-panel>
 			<p>正在检查登录状态...</p>
@@ -48,13 +48,17 @@ const description = "KiteBlog 的网页端文章管理后台。";
 			location.reload();
 		}
 
+		function errorMessage(code) {
+			const messages = {
+				oauth_state: "登录状态校验失败，请重新登录。",
+				forbidden: "当前 GitHub 账号没有后台权限。",
+			};
+			return messages[code] || code;
+		}
+
 		async function initAdmin() {
 			if (error && panel) {
-				const messages = {
-					oauth_state: "登录状态校验失败，请重新登录。",
-					forbidden: "当前 GitHub 账号没有后台权限。",
-				};
-				panel.innerHTML = `<p class="admin-error">${escapeHtml(messages[error] || error)}</p>`;
+				panel.innerHTML = `<p class="admin-error">${escapeHtml(errorMessage(error))}</p>`;
 			}
 			try {
 				const response = await fetch("/api/admin/session", { cache: "no-store" });
@@ -66,6 +70,10 @@ const description = "KiteBlog 的网页端文章管理后台。";
 							<strong>${escapeHtml(payload.user.name || payload.user.login)}</strong>
 							<span>@${escapeHtml(payload.user.login)}</span>
 						</div>
+					</div>
+					<div class="admin-cards">
+						<a href="/admin/posts/"><strong>文章管理</strong><span>新增、编辑、删除 Markdown 文章</span></a>
+						<a href="/admin/settings/"><strong>站点设置</strong><span>修改头像、背景、文案和链接</span></a>
 					</div>`;
 					actions.innerHTML = `<a href="/admin/posts/" class="admin-button primary">管理文章</a>
 						<a href="/admin/settings/" class="admin-button">站点设置</a>
@@ -82,106 +90,32 @@ const description = "KiteBlog 的网页端文章管理后台。";
 </MainGridLayout>
 
 <style>
-	.admin-shell {
-		display: grid;
-		gap: 1rem;
+	.admin-shell { display: grid; gap: 1rem; }
+	.admin-hero, .admin-panel {
+		border: 1px solid var(--line-divider); border-radius: 12px;
+		background: color-mix(in oklch, var(--card-bg) 82%, transparent);
+		box-shadow: var(--surface-shadow); backdrop-filter: saturate(1.14) blur(var(--kite-glass-strength, 16px));
 	}
-
-	.admin-hero,
-	.admin-panel {
-		border: 1px solid var(--line-divider);
-		border-radius: var(--kite-card-radius, 14px);
-		background: color-mix(in oklch, var(--card-bg) 78%, transparent);
-		box-shadow: var(--surface-shadow);
-		backdrop-filter: saturate(1.16) blur(var(--kite-glass-strength, 16px));
-	}
-
-	.admin-hero {
-		display: flex;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: clamp(1.2rem, 3vw, 2rem);
-	}
-
-	.admin-kicker {
-		margin: 0 0 0.45rem;
-		color: var(--primary);
-		font-size: 0.78rem;
-		font-weight: 800;
-		text-transform: uppercase;
-	}
-
-	.admin-hero h1 {
-		margin: 0;
-		font-size: clamp(1.9rem, 4vw, 3.1rem);
-		line-height: 1.05;
-		letter-spacing: 0;
-	}
-
-	.admin-hero p,
-	.admin-panel p {
-		margin: 0.5rem 0 0;
-		color: var(--content-meta);
-		line-height: 1.7;
-	}
-
-	.admin-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.65rem;
-		align-items: flex-start;
-	}
-
+	.admin-hero { display: flex; justify-content: space-between; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); }
+	.admin-kicker { margin: 0 0 .45rem; color: var(--primary); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+	h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3.1rem); line-height: 1.05; letter-spacing: 0; }
+	.admin-hero p, .admin-panel p { margin: .5rem 0 0; color: var(--content-meta); line-height: 1.7; }
+	.admin-actions { display: flex; flex-wrap: wrap; gap: .65rem; align-items: flex-start; }
 	.admin-button {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.4rem;
-		min-height: 2.55rem;
-		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider));
-		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
-		padding: 0.65rem 0.85rem;
-		color: var(--primary);
-		background: color-mix(in oklch, var(--primary) 10%, transparent);
-		font-weight: 800;
-		text-decoration: none;
-		cursor: pointer;
+		display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.55rem;
+		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider)); border-radius: 8px;
+		padding: .65rem .85rem; color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, transparent);
+		font-weight: 800; text-decoration: none; cursor: pointer;
 	}
-
-	.admin-button.primary {
-		color: white;
-		background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22));
-	}
-
-	.admin-panel {
-		padding: 1rem;
-	}
-
-	.admin-user {
-		display: flex;
-		align-items: center;
-		gap: 0.8rem;
-	}
-
-	.admin-user img {
-		width: 3rem;
-		height: 3rem;
-		border-radius: 999px;
-	}
-
-	.admin-user span {
-		display: block;
-		color: var(--content-meta);
-	}
-
-	.admin-error {
-		color: oklch(0.56 0.18 25);
-		font-weight: 800;
-	}
-
-	@media (max-width: 640px) {
-		.admin-hero {
-			flex-direction: column;
-		}
-	}
+	.admin-button.primary { color: white; background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22)); }
+	.admin-panel { padding: 1rem; }
+	.admin-user { display: flex; align-items: center; gap: .8rem; }
+	.admin-user img { width: 3rem; height: 3rem; border-radius: 999px; }
+	.admin-user span { display: block; color: var(--content-meta); }
+	.admin-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .8rem; margin-top: 1rem; }
+	.admin-cards a { border: 1px solid var(--line-divider); border-radius: 10px; padding: 1rem; text-decoration: none; background: color-mix(in oklch, var(--card-bg) 70%, transparent); }
+	.admin-cards strong { display: block; color: var(--content); }
+	.admin-cards span { display: block; margin-top: .35rem; color: var(--content-meta); }
+	.admin-error { color: oklch(0.56 0.18 25); font-weight: 800; }
+	@media (max-width: 640px) { .admin-hero { flex-direction: column; } .admin-cards { grid-template-columns: 1fr; } }
 </style>

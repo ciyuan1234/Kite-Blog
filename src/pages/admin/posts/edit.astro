@@ -3,14 +3,14 @@ import { Icon } from "astro-icon/components";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 
 const title = "编辑文章";
-const description = "KiteBlog 网页端文章编辑器。";
+const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 ---
 
 <MainGridLayout title={title} description={description}>
 	<section class="edit-shell">
-		<header class="edit-hero">
+		<header class="edit-header">
 			<div>
-				<p class="edit-kicker">Editor</p>
+				<p class="eyebrow">Editor</p>
 				<h1 data-page-title>新建文章</h1>
 				<p data-session-state>正在检查登录状态...</p>
 			</div>
@@ -30,11 +30,11 @@ const description = "KiteBlog 网页端文章编辑器。";
 			<div class="field-grid">
 				<label>
 					<span>标题</span>
-					<input name="title" value="新的博客文章" required />
+					<input name="title" value="新的博客文章" required autocomplete="off" />
 				</label>
 				<label>
 					<span>Slug</span>
-					<input name="slug" value="new-post" required />
+					<input name="slug" value="new-post" required autocomplete="off" />
 				</label>
 				<label>
 					<span>发布日期</span>
@@ -42,11 +42,11 @@ const description = "KiteBlog 网页端文章编辑器。";
 				</label>
 				<label>
 					<span>分类</span>
-					<input name="category" value="随笔" />
+					<input name="category" value="随笔" autocomplete="off" />
 				</label>
 				<label>
 					<span>标签</span>
-					<input name="tags" value="KiteBlog, 随笔" />
+					<input name="tags" value="KiteBlog, 随笔" autocomplete="off" />
 				</label>
 				<label>
 					<span>封面图 URL</span>
@@ -54,18 +54,20 @@ const description = "KiteBlog 网页端文章编辑器。";
 				</label>
 				<label class="span-2">
 					<span>摘要</span>
-					<input name="description" value="这里是文章摘要。" />
+					<input name="description" value="这里是文章摘要。" autocomplete="off" />
 				</label>
 				<label class="span-2">
 					<span>Markdown 正文</span>
-					<textarea name="body" rows="24" required>从这里开始写正文。</textarea>
+					<textarea name="body" rows="26" required>从这里开始写正文。</textarea>
 				</label>
 			</div>
-			<div class="edit-actions">
-				<button type="button" data-save class="edit-button primary">保存</button>
-				<button type="button" data-delete class="edit-button danger">删除</button>
+			<div class="edit-footer">
+				<p class="edit-status" data-status>等待操作。</p>
+				<div class="edit-actions">
+					<button type="button" data-save class="edit-button primary">保存</button>
+					<button type="button" data-delete class="edit-button danger">删除</button>
+				</div>
 			</div>
-			<p class="edit-status" data-status>等待操作。</p>
 		</form>
 	</section>
 
@@ -113,7 +115,7 @@ const description = "KiteBlog 网页端文章编辑器。";
 				title: form.elements.title.value.trim(),
 				slug: form.elements.slug.value.trim(),
 				published: form.elements.published.value || today(),
-				category: form.elements.category.value.trim(),
+				category: form.elements.category.value.trim() || "随笔",
 				tags: form.elements.tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
 				description: form.elements.description.value.trim(),
 				image: form.elements.image.value.trim(),
@@ -163,6 +165,7 @@ const description = "KiteBlog 网页端文章编辑器。";
 				setStatus("标题、Slug 和正文不能为空。", "error");
 				return;
 			}
+			document.querySelectorAll("[data-save]").forEach((button) => button.disabled = true);
 			setStatus("正在保存到 GitHub...", "info");
 			try {
 				if (editingSlug) {
@@ -176,19 +179,23 @@ const description = "KiteBlog 网页端文章编辑器。";
 						body: JSON.stringify(post),
 					});
 					history.replaceState(null, "", `/admin/posts/edit/?slug=${encodeURIComponent(post.slug)}`);
+					form.elements.slug.readOnly = true;
 				}
-				setStatus("已提交到 GitHub，等待 Cloudflare 重新部署后前台生效。", "success");
+				setStatus("已提交到 GitHub。Cloudflare 自动部署完成后，前台文章会更新。", "success");
 			} catch (error) {
 				setStatus(error.message, "error");
+			} finally {
+				document.querySelectorAll("[data-save]").forEach((button) => button.disabled = false);
 			}
 		}
 
 		async function deletePost() {
-			if (!editingSlug) return;
-			if (!confirm(`确定删除 ${editingSlug} 吗？`)) return;
+			const slug = editingSlug || form.elements.slug.value.trim();
+			if (!slug) return;
+			if (!confirm(`确定删除 ${slug} 吗？删除后会提交到 GitHub。`)) return;
 			setStatus("正在删除...", "info");
 			try {
-				await apiRequest(`/api/admin/posts/${encodeURIComponent(editingSlug)}`, { method: "DELETE" });
+				await apiRequest(`/api/admin/posts/${encodeURIComponent(slug)}`, { method: "DELETE" });
 				location.href = "/admin/posts/";
 			} catch (error) {
 				setStatus(error.message, "error");
@@ -204,150 +211,44 @@ const description = "KiteBlog 网页端文章编辑器。";
 </MainGridLayout>
 
 <style>
-	.edit-shell {
-		display: grid;
-		gap: 1rem;
+	.edit-shell { display: grid; gap: 1rem; }
+	.edit-header, .edit-panel {
+		border: 1px solid var(--line-divider); border-radius: 12px;
+		background: color-mix(in oklch, var(--card-bg) 82%, transparent);
+		box-shadow: var(--surface-shadow); backdrop-filter: saturate(1.14) blur(var(--kite-glass-strength, 16px));
 	}
-
-	.edit-hero,
-	.edit-panel {
-		border: 1px solid var(--line-divider);
-		border-radius: var(--kite-card-radius, 14px);
-		background: color-mix(in oklch, var(--card-bg) 78%, transparent);
-		box-shadow: var(--surface-shadow);
-		backdrop-filter: saturate(1.16) blur(var(--kite-glass-strength, 16px));
-	}
-
-	.edit-hero {
-		display: flex;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: clamp(1.2rem, 3vw, 2rem);
-	}
-
-	.edit-kicker {
-		margin: 0 0 0.45rem;
-		color: var(--primary);
-		font-size: 0.78rem;
-		font-weight: 800;
-		text-transform: uppercase;
-	}
-
-	.edit-hero h1 {
-		margin: 0;
-		font-size: clamp(1.9rem, 4vw, 3.1rem);
-		line-height: 1.05;
-		letter-spacing: 0;
-	}
-
-	.edit-hero p {
-		margin: 0.5rem 0 0;
-		color: var(--content-meta);
-		line-height: 1.7;
-	}
-
-	.edit-actions {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.65rem;
-	}
-
+	.edit-header { display: flex; justify-content: space-between; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); }
+	.eyebrow { margin: 0 0 .45rem; color: var(--primary); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+	h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3.1rem); line-height: 1.05; letter-spacing: 0; }
+	.edit-header p { margin: .5rem 0 0; color: var(--content-meta); line-height: 1.7; }
+	.edit-actions { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
 	.edit-button {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.4rem;
-		min-height: 2.45rem;
-		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider));
-		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
-		padding: 0.6rem 0.8rem;
-		color: var(--primary);
-		background: color-mix(in oklch, var(--primary) 10%, transparent);
-		font-weight: 800;
-		text-decoration: none;
-		cursor: pointer;
+		display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.45rem;
+		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider)); border-radius: 8px;
+		padding: .6rem .8rem; color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, transparent);
+		font-weight: 800; text-decoration: none; cursor: pointer;
 	}
-
-	.edit-button.primary {
-		color: white;
-		background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22));
+	.edit-button.primary { color: white; background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22)); }
+	.edit-button.danger { color: oklch(0.56 0.18 25); }
+	.edit-button:disabled { opacity: .55; cursor: wait; }
+	.edit-panel { padding: 1rem; }
+	.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 .85rem; }
+	.span-2 { grid-column: 1 / -1; }
+	label { display: grid; gap: .4rem; margin-bottom: .9rem; font-weight: 700; }
+	label span { color: var(--content-meta); font-size: .84rem; }
+	input, textarea {
+		width: 100%; min-width: 0; border: 1px solid var(--line-divider); border-radius: 8px;
+		padding: .75rem .85rem; color: inherit; background: color-mix(in oklch, var(--card-bg) 70%, transparent); outline: none;
 	}
-
-	.edit-button.danger {
-		color: oklch(0.56 0.18 25);
-	}
-
-	.edit-panel {
-		padding: 1rem;
-	}
-
-	.field-grid {
-		display: grid;
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 0 0.85rem;
-	}
-
-	.span-2 {
-		grid-column: 1 / -1;
-	}
-
-	label {
-		display: grid;
-		gap: 0.4rem;
-		margin-bottom: 0.9rem;
-		font-weight: 700;
-	}
-
-	label span {
-		font-size: 0.84rem;
-	}
-
-	input,
-	textarea {
-		width: 100%;
-		min-width: 0;
-		border: 1px solid var(--line-divider);
-		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
-		padding: 0.75rem 0.85rem;
-		color: inherit;
-		background: color-mix(in oklch, var(--card-bg) 70%, transparent);
-		outline: none;
-	}
-
-	textarea {
-		resize: vertical;
-		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-		line-height: 1.6;
-	}
-
+	input:focus, textarea:focus { border-color: var(--primary); }
+	input[readonly] { opacity: .75; }
+	textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height: 1.6; }
+	.edit-footer { display: flex; justify-content: space-between; gap: 1rem; align-items: center; flex-wrap: wrap; }
 	.edit-status {
-		border: 1px solid var(--line-divider);
-		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
-		padding: 0.75rem;
-		color: var(--content-meta);
-		background: color-mix(in oklch, var(--card-bg) 64%, transparent);
-		font-weight: 800;
+		flex: 1; min-width: 14rem; border: 1px solid var(--line-divider); border-radius: 8px; margin: 0;
+		padding: .75rem; color: var(--content-meta); background: color-mix(in oklch, var(--card-bg) 64%, transparent); font-weight: 800;
 	}
-
-	.edit-status[data-state="success"] {
-		color: oklch(0.55 0.14 155);
-	}
-
-	.edit-status[data-state="error"] {
-		color: oklch(0.56 0.18 25);
-	}
-
-	@media (max-width: 760px) {
-		.edit-hero {
-			flex-direction: column;
-		}
-
-		.field-grid {
-			grid-template-columns: 1fr;
-		}
-
-		.span-2 {
-			grid-column: auto;
-		}
-	}
+	.edit-status[data-state="success"] { color: oklch(0.55 0.14 155); }
+	.edit-status[data-state="error"] { color: oklch(0.56 0.18 25); }
+	@media (max-width: 760px) { .edit-header { flex-direction: column; } .field-grid { grid-template-columns: 1fr; } .span-2 { grid-column: auto; } .edit-actions, .edit-button { width: 100%; } }
 </style>

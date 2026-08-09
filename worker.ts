@@ -1,4 +1,4 @@
-type Env = {
+﻿type Env = {
 	ASSETS: {
 		fetch: (request: Request) => Promise<Response>;
 	};
@@ -55,6 +55,7 @@ type SiteSettingsInput = {
 	profileBio?: string;
 	avatarUrl?: string;
 	githubUrl?: string;
+	qqUrl?: string;
 	wallpaperMode?: "banner" | "fullscreen" | "overlay" | "none";
 	desktopBackgroundUrl?: string[] | string;
 	mobileBackgroundUrl?: string[] | string;
@@ -383,6 +384,7 @@ function normalizeSiteSettings(input: SiteSettingsInput) {
 			"https://github.com/ciyuan1234",
 			2048,
 		),
+		qqUrl: cleanText(input.qqUrl, "", 2048),
 		wallpaperMode: ["banner", "fullscreen", "overlay", "none"].includes(
 			String(input.wallpaperMode),
 		)
@@ -417,6 +419,11 @@ function parseSiteSettings(
 			/\bname:\s*"GitHub"[\s\S]*?\burl:\s*"([^"]*)"/,
 			"https://github.com/ciyuan1234",
 		),
+		qqUrl: firstStringMatch(
+			profileSource,
+			/\bname:\s*"QQ"[\s\S]*?\burl:\s*"([^"]*)"/,
+			"",
+		),
 		wallpaperMode: firstStringMatch(
 			wallpaperSource,
 			/\bmode:\s*"(banner|fullscreen|overlay|none)"/,
@@ -448,6 +455,9 @@ function tsArray(values: string[]) {
 function buildProfileConfig(
 	settings: ReturnType<typeof normalizeSiteSettings>,
 ) {
+	const qqLink = settings.qqUrl
+		? `\n\t\t{\n\t\t\tname: "QQ",\n\t\t\ticon: "fa7-brands:qq",\n\t\t\turl: ${tsString(settings.qqUrl)},\n\t\t\tshowName: false,\n\t\t},`
+		: "";
 	return `import type { ProfileConfig } from "../types/profileConfig";
 
 export const profileConfig: ProfileConfig = {
@@ -460,7 +470,7 @@ export const profileConfig: ProfileConfig = {
 \t\t\ticon: "fa7-brands:github",
 \t\t\turl: ${tsString(settings.githubUrl)},
 \t\t\tshowName: false,
-\t\t},
+\t\t},${qqLink}
 \t\t{
 \t\t\tname: "RSS",
 \t\t\ticon: "fa7-solid:rss",

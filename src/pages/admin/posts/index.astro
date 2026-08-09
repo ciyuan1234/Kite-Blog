@@ -3,14 +3,14 @@ import { Icon } from "astro-icon/components";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 
 const title = "文章管理";
-const description = "KiteBlog 文章新增、编辑和删除。";
+const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 ---
 
 <MainGridLayout title={title} description={description}>
 	<section class="posts-shell">
-		<header class="posts-hero">
+		<header class="posts-header">
 			<div>
-				<p class="posts-kicker">Posts</p>
+				<p class="eyebrow">Posts</p>
 				<h1>文章管理</h1>
 				<p data-session-state>正在检查登录状态...</p>
 			</div>
@@ -19,20 +19,20 @@ const description = "KiteBlog 文章新增、编辑和删除。";
 					<Icon is:inline name="material-symbols:add-circle-outline-rounded" />
 					新建文章
 				</a>
-				<a href="/admin/" class="posts-button">
-					<Icon is:inline name="material-symbols:admin-panel-settings-outline-rounded" />
-					后台
-				</a>
 				<a href="/admin/settings/" class="posts-button">
 					<Icon is:inline name="material-symbols:tune-rounded" />
 					设置
+				</a>
+				<a href="/admin/" class="posts-button">
+					<Icon is:inline name="material-symbols:dashboard-outline-rounded" />
+					后台
 				</a>
 			</div>
 		</header>
 
 		<div class="posts-panel">
 			<div class="toolbar">
-				<input data-search placeholder="搜索标题、分类或标签" />
+				<input data-search placeholder="搜索标题、slug、分类或标签" />
 				<button type="button" data-refresh>
 					<Icon is:inline name="material-symbols:refresh-rounded" />
 					刷新
@@ -73,10 +73,7 @@ const description = "KiteBlog 文章新增、编辑和删除。";
 			const query = searchEl?.value?.trim?.().toLowerCase() || "";
 			const filtered = posts.filter((post) => {
 				if (!query) return true;
-				return [post.title, post.slug, post.category, post.description, ...(post.tags || [])]
-					.join(" ")
-					.toLowerCase()
-					.includes(query);
+				return [post.title, post.slug, post.category, post.description, ...(post.tags || [])].join(" ").toLowerCase().includes(query);
 			});
 			if (!listEl) return;
 			if (!filtered.length) {
@@ -84,13 +81,13 @@ const description = "KiteBlog 文章新增、编辑和删除。";
 				return;
 			}
 			listEl.innerHTML = filtered.map((post) => `<article class="post-item">
-				<div>
+				<div class="post-main">
 					<strong>${escapeHtml(post.title || post.slug)}</strong>
 					<p>${escapeHtml(post.description || "暂无摘要")}</p>
-					<span>${escapeHtml(post.published || "未设置日期")} · ${escapeHtml(post.category || "随笔")} · ${escapeHtml((post.tags || []).join(", "))}</span>
+					<span>${escapeHtml(post.published || "未设置日期")} · ${escapeHtml(post.category || "随笔")} · ${escapeHtml((post.tags || []).join(", ") || "无标签")}</span>
 				</div>
 				<div class="item-actions">
-					<a href="/posts/${escapeHtml(post.slug)}/" target="_blank" rel="noreferrer">查看</a>
+					<a href="/posts/${encodeURIComponent(post.slug)}/" target="_blank" rel="noreferrer">查看</a>
 					<a href="/admin/posts/edit/?slug=${encodeURIComponent(post.slug)}">编辑</a>
 					<button type="button" data-delete="${escapeHtml(post.slug)}">删除</button>
 				</div>
@@ -98,10 +95,11 @@ const description = "KiteBlog 文章新增、编辑和删除。";
 		}
 
 		async function loadPosts() {
+			if (listEl) listEl.innerHTML = '<p class="empty-state">正在读取文章...</p>';
 			try {
 				const session = await apiRequest("/api/admin/session");
 				if (!session.authenticated) {
-					stateEl.textContent = "未登录。";
+					stateEl.textContent = "未登录";
 					listEl.innerHTML = '<a class="login-link" href="/api/auth/github/start">使用 GitHub 登录</a>';
 					return;
 				}
@@ -115,7 +113,7 @@ const description = "KiteBlog 文章新增、编辑和删除。";
 		}
 
 		async function deletePost(slug) {
-			if (!confirm(`确定删除 ${slug} 吗？`)) return;
+			if (!confirm(`确定删除文章 ${slug} 吗？这个操作会提交到 GitHub。`)) return;
 			try {
 				await apiRequest(`/api/admin/posts/${encodeURIComponent(slug)}`, { method: "DELETE" });
 				posts = posts.filter((post) => post.slug !== slug);
@@ -137,133 +135,38 @@ const description = "KiteBlog 文章新增、编辑和删除。";
 </MainGridLayout>
 
 <style>
-	.posts-shell {
-		display: grid;
-		gap: 1rem;
-	}
-
-	.posts-hero,
-	.posts-panel,
-	.post-item {
+	.posts-shell { display: grid; gap: 1rem; }
+	.posts-header, .posts-panel, .post-item {
 		border: 1px solid var(--line-divider);
-		border-radius: var(--kite-card-radius, 14px);
-		background: color-mix(in oklch, var(--card-bg) 78%, transparent);
+		border-radius: 12px;
+		background: color-mix(in oklch, var(--card-bg) 82%, transparent);
 		box-shadow: var(--surface-shadow);
-		backdrop-filter: saturate(1.16) blur(var(--kite-glass-strength, 16px));
+		backdrop-filter: saturate(1.14) blur(var(--kite-glass-strength, 16px));
 	}
-
-	.posts-hero {
-		display: flex;
-		justify-content: space-between;
-		gap: 1rem;
-		padding: clamp(1.2rem, 3vw, 2rem);
+	.posts-header { display: flex; justify-content: space-between; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); }
+	.eyebrow { margin: 0 0 .45rem; color: var(--primary); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+	h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3.1rem); line-height: 1.05; letter-spacing: 0; }
+	.posts-header p, .post-item p { margin: .5rem 0 0; color: var(--content-meta); line-height: 1.7; }
+	.posts-actions, .item-actions, .toolbar { display: flex; flex-wrap: wrap; gap: .65rem; }
+	.posts-button, .item-actions a, button, .login-link {
+		display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.45rem;
+		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider)); border-radius: 8px;
+		padding: .6rem .8rem; color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, transparent);
+		font-weight: 800; text-decoration: none; cursor: pointer;
 	}
-
-	.posts-kicker {
-		margin: 0 0 0.45rem;
-		color: var(--primary);
-		font-size: 0.78rem;
-		font-weight: 800;
-		text-transform: uppercase;
-	}
-
-	.posts-hero h1 {
-		margin: 0;
-		font-size: clamp(1.9rem, 4vw, 3.1rem);
-		line-height: 1.05;
-		letter-spacing: 0;
-	}
-
-	.posts-hero p,
-	.post-item p {
-		margin: 0.5rem 0 0;
-		color: var(--content-meta);
-		line-height: 1.7;
-	}
-
-	.posts-actions,
-	.item-actions,
-	.toolbar {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.65rem;
-	}
-
-	.posts-button,
-	.item-actions a,
-	button,
-	.login-link {
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
-		gap: 0.4rem;
-		min-height: 2.45rem;
-		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider));
-		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
-		padding: 0.6rem 0.8rem;
-		color: var(--primary);
-		background: color-mix(in oklch, var(--primary) 10%, transparent);
-		font-weight: 800;
-		text-decoration: none;
-		cursor: pointer;
-	}
-
-	.posts-button.primary {
-		color: white;
-		background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22));
-	}
-
-	.posts-panel {
-		padding: 1rem;
-	}
-
-	.toolbar {
-		margin-bottom: 1rem;
-	}
-
+	.posts-button.primary { color: white; background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22)); }
+	.item-actions button { color: oklch(0.56 0.18 25); }
+	.posts-panel { padding: 1rem; }
+	.toolbar { margin-bottom: 1rem; }
 	.toolbar input {
-		flex: 1;
-		min-width: 14rem;
-		border: 1px solid var(--line-divider);
-		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
-		padding: 0.75rem 0.85rem;
-		color: inherit;
-		background: color-mix(in oklch, var(--card-bg) 70%, transparent);
+		flex: 1; min-width: 14rem; border: 1px solid var(--line-divider); border-radius: 8px;
+		padding: .75rem .85rem; color: inherit; background: color-mix(in oklch, var(--card-bg) 70%, transparent);
 	}
-
-	.post-list {
-		display: grid;
-		gap: 0.8rem;
-	}
-
-	.post-item {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto;
-		gap: 1rem;
-		padding: 1rem;
-	}
-
-	.post-item strong {
-		display: block;
-		font-size: 1.1rem;
-		overflow-wrap: anywhere;
-	}
-
-	.post-item span,
-	.empty-state {
-		color: var(--content-meta);
-	}
-
-	.error-text {
-		color: oklch(0.56 0.18 25);
-		font-weight: 800;
-	}
-
-	@media (max-width: 760px) {
-		.posts-hero,
-		.post-item {
-			grid-template-columns: 1fr;
-			flex-direction: column;
-		}
-	}
+	.post-list { display: grid; gap: .8rem; }
+	.post-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; padding: 1rem; }
+	.post-main { min-width: 0; }
+	.post-item strong { display: block; font-size: 1.1rem; overflow-wrap: anywhere; }
+	.post-item span, .empty-state { color: var(--content-meta); }
+	.error-text { color: oklch(0.56 0.18 25); font-weight: 800; }
+	@media (max-width: 760px) { .posts-header, .post-item { grid-template-columns: 1fr; flex-direction: column; } .item-actions a, .item-actions button { flex: 1; } }
 </style>
