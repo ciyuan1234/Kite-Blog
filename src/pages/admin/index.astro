@@ -12,24 +12,39 @@ const description = "KiteBlog 的网页端文章管理后台。";
 			<div>
 				<p class="admin-kicker">KiteBlog Admin</p>
 				<h1>博客后台</h1>
-				<p>登录 GitHub 后，可以直接在网页端新增、编辑和删除文章。</p>
+				<p>输入后台密码后，可以直接在网页端管理文章、头像、背景和首页文案。</p>
 			</div>
-			<div class="admin-actions" data-admin-actions>
-				<a href="/api/auth/github/start" class="admin-button primary">
-					<Icon is:inline name="fa7-brands:github" />
-					GitHub 登录
-				</a>
-			</div>
+			<div class="admin-actions" data-admin-actions></div>
 		</div>
 
 		<div class="admin-panel" data-admin-panel>
-			<p>正在检查登录状态...</p>
+			<form class="admin-login" data-login-form>
+				<label>
+					<span>后台密码</span>
+					<input
+						type="password"
+						name="password"
+						autocomplete="current-password"
+						placeholder="输入 Cloudflare 环境变量 ADMIN_PASSWORD"
+						required
+					/>
+				</label>
+				<div class="admin-login-actions">
+					<button type="submit" class="admin-button primary">
+						<Icon is:inline name="material-symbols:lock-open-outline-rounded" />
+						登录后台
+					</button>
+					<p data-login-state>正在检查登录状态...</p>
+				</div>
+			</form>
 		</div>
 	</section>
 
 	<script is:inline>
 		const panel = document.querySelector("[data-admin-panel]");
 		const actions = document.querySelector("[data-admin-actions]");
+		const form = document.querySelector("[data-login-form]");
+		const loginState = document.querySelector("[data-login-state]");
 		const params = new URLSearchParams(location.search);
 		const error = params.get("error");
 
@@ -48,34 +63,78 @@ const description = "KiteBlog 的网页端文章管理后台。";
 			location.reload();
 		}
 
+		async function login(password) {
+			const response = await fetch("/api/auth/login", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				cache: "no-store",
+				body: JSON.stringify({ password }),
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || payload.ok === false) {
+				throw new Error(payload.error || `登录失败：${response.status}`);
+			}
+			return payload;
+		}
+
+		function renderAuthenticated(user) {
+			if (panel) {
+				panel.innerHTML = `<div class="admin-user">
+					<div>
+						<strong>${escapeHtml(user?.name || "KiteBlog Admin")}</strong>
+						<span>${escapeHtml(user?.login || "admin")}</span>
+					</div>
+				</div>`;
+			}
+			if (actions) {
+				actions.innerHTML = `<a href="/admin/posts/" class="admin-button primary">管理文章</a>
+					<a href="/admin/settings/" class="admin-button">站点设置</a>
+					<button type="button" class="admin-button" data-logout>退出</button>`;
+				document.querySelector("[data-logout]")?.addEventListener("click", logout);
+			}
+		}
+
 		async function initAdmin() {
 			if (error && panel) {
-				const messages = {
-					oauth_state: "登录状态校验失败，请重新登录。",
-					forbidden: "当前 GitHub 账号没有后台权限。",
-				};
-				panel.innerHTML = `<p class="admin-error">${escapeHtml(messages[error] || error)}</p>`;
+				if (loginState) loginState.textContent = error;
 			}
 			try {
 				const response = await fetch("/api/admin/session", { cache: "no-store" });
 				const payload = await response.json();
 				if (payload.authenticated) {
-					panel.innerHTML = `<div class="admin-user">
-						${payload.user.avatarUrl ? `<img src="${escapeHtml(payload.user.avatarUrl)}" alt="" />` : ""}
-						<div>
-							<strong>${escapeHtml(payload.user.name || payload.user.login)}</strong>
-							<span>@${escapeHtml(payload.user.login)}</span>
-						</div>
-					</div>`;
-					actions.innerHTML = `<a href="/admin/posts/" class="admin-button primary">管理文章</a>
-						<a href="/admin/settings/" class="admin-button">站点设置</a>
-						<button type="button" class="admin-button" data-logout>退出</button>`;
-					document.querySelector("[data-logout]")?.addEventListener("click", logout);
+					renderAuthenticated(payload.user);
+				} else if (loginState && !error) {
+					loginState.textContent = "请输入后台密码。";
 				}
 			} catch (error) {
-				if (panel) panel.innerHTML = `<p class="admin-error">${escapeHtml(error.message)}</p>`;
+				if (loginState) {
+					loginState.textContent = error.message;
+					loginState.classList.add("admin-error");
+				}
 			}
 		}
+
+		form?.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			const password = new FormData(form).get("password");
+			const button = form.querySelector("button[type='submit']");
+			button.disabled = true;
+			if (loginState) {
+				loginState.textContent = "正在登录...";
+				loginState.classList.remove("admin-error");
+			}
+			try {
+				const payload = await login(password);
+				renderAuthenticated(payload.user);
+			} catch (error) {
+				if (loginState) {
+					loginState.textContent = error.message;
+					loginState.classList.add("admin-error");
+				}
+			} finally {
+				button.disabled = false;
+			}
+		});
 
 		initAdmin();
 	</script>
@@ -155,6 +214,49 @@ const description = "KiteBlog 的网页端文章管理后台。";
 
 	.admin-panel {
 		padding: 1rem;
+	}
+
+	.admin-login {
+		display: grid;
+		gap: 1rem;
+		max-width: 34rem;
+	}
+
+	.admin-login label {
+		display: grid;
+		gap: 0.45rem;
+	}
+
+	.admin-login label span {
+		color: var(--content-meta);
+		font-size: 0.86rem;
+		font-weight: 800;
+	}
+
+	.admin-login input {
+		width: 100%;
+		border: 1px solid var(--line-divider);
+		border-radius: calc(var(--kite-card-radius, 14px) - 6px);
+		padding: 0.75rem 0.85rem;
+		color: var(--content);
+		background: color-mix(in oklch, var(--card-bg) 70%, transparent);
+		outline: none;
+	}
+
+	.admin-login input:focus {
+		border-color: var(--primary);
+	}
+
+	.admin-login-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		align-items: center;
+	}
+
+	.admin-button:disabled {
+		opacity: 0.55;
+		cursor: wait;
 	}
 
 	.admin-user {

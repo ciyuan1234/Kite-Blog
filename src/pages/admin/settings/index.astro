@@ -204,11 +204,11 @@ const description = "KiteBlog 头像、背景和首页文案设置。";
 				localStorage.removeItem("kiteblog:studio");
 				const session = await apiRequest("/api/admin/session");
 				if (!session.authenticated) {
-					if (stateEl) stateEl.innerHTML = '<a href="/api/auth/github/start">使用 GitHub 登录</a>';
+					if (stateEl) stateEl.innerHTML = '<a href="/admin/">返回后台登录</a>';
 					if (emptyPanel) emptyPanel.innerHTML = '<p>需要登录后管理站点设置。</p>';
 					return;
 				}
-				if (stateEl) stateEl.textContent = `已登录：${session.user.login}`;
+				if (stateEl) stateEl.textContent = `已登录：${session.user.name || session.user.login}`;
 				const payload = await apiRequest("/api/admin/settings");
 				fill(payload.settings || {});
 				if (emptyPanel) emptyPanel.hidden = true;

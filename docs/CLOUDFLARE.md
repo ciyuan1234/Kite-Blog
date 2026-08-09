@@ -16,7 +16,7 @@ pnpm run deploy:worker
 - `assets.binding`: `ASSETS`
 - `run_worker_first`: `/api/*`
 
-## GitHub 后台配置
+## 后台配置
 
 网页后台位于 `/admin/`，文章会通过 GitHub API 写入仓库：
 
@@ -27,10 +27,8 @@ ciyuan1234/Kite-Blog
 Cloudflare Worker 需要配置这些环境变量：
 
 ```text
-GITHUB_CLIENT_ID=GitHub OAuth App Client ID
-GITHUB_CLIENT_SECRET=GitHub OAuth App Client Secret
+ADMIN_PASSWORD=后台登录密码
 GITHUB_REPO_TOKEN=有仓库 contents 读写权限的 GitHub Token
-ADMIN_GITHUB_LOGIN=ciyuan1234
 SESSION_SECRET=一段足够长的随机字符串
 PUBLIC_SITE_URL=https://kite1024.xyz
 ```
@@ -43,22 +41,11 @@ GITHUB_REPO_NAME=Kite-Blog
 GITHUB_REPO_BRANCH=main
 ```
 
-GitHub OAuth App 的 callback URL：
-
-```text
-https://kite1024.xyz/api/auth/github/callback
-```
-
-如果暂时使用 workers.dev 地址，就把上面的域名换成当前 Worker 地址，例如：
-
-```text
-https://kite-blog.3085197557.workers.dev/api/auth/github/callback
-```
+后台登录不再使用 GitHub OAuth。`ADMIN_PASSWORD` 只放在 Cloudflare 环境变量里，不要写进仓库。
 
 ## 后台接口
 
-- `GET /api/auth/github/start`
-- `GET /api/auth/github/callback`
+- `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/admin/session`
 - `GET /api/admin/settings`
@@ -81,6 +68,6 @@ https://kite-blog.3085197557.workers.dev/api/auth/github/callback
 
 ## 注意事项
 
-- 不要把 `GITHUB_CLIENT_SECRET`、`GITHUB_REPO_TOKEN` 或 `SESSION_SECRET` 写进仓库。
+- 不要把 `ADMIN_PASSWORD`、`GITHUB_REPO_TOKEN` 或 `SESSION_SECRET` 写进仓库。
 - 图片使用外链 URL，例如图床、GitHub raw 或 Cloudflare R2 的公开链接。
 - 如果你是手动 `wrangler deploy`，GitHub 上的代码不会自动进入线上 Worker，需要重新部署。
