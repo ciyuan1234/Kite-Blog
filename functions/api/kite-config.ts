@@ -51,13 +51,21 @@ function normalizeConfig(input: Record<string, unknown>) {
 		"heroSubtitle",
 		"backgroundUrl",
 		"glassStrength",
+		"backgroundOpacity",
+		"accentHue",
+		"cardRadius",
+		"cardEffect",
+		"fontScale",
+		"musicUrl",
 	];
 	const output: Record<string, string> = {};
 	for (const key of allowList) {
 		const value = input[key];
 		if (typeof value !== "string") continue;
-		output[key] = value.trim().slice(0, key.endsWith("Url") ? 2048 : 240);
+		const maxLength = key.endsWith("Url") ? 2048 : 240;
+		output[key] = value.trim().slice(0, maxLength);
 	}
+	output.updatedAt = new Date().toISOString();
 	return output;
 }
 

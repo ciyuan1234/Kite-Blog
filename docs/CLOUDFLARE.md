@@ -1,16 +1,56 @@
 # Cloudflare 部署说明
 
-KiteBlog 可以使用 Cloudflare Pages 托管静态页面，并通过 Pages Functions 提供少量后端能力。
+KiteBlog 现在同时支持两种 Cloudflare 部署方式：
 
-## 推荐设置
+- Cloudflare Workers：适合 `*.workers.dev` 地址，本仓库的 `worker.ts` 会处理 `/api/*` 并托管 `dist` 静态资源。
+- Cloudflare Pages：适合 `*.pages.dev` 地址，本仓库保留 `functions/api/*` 作为 Pages Functions。
 
-在 Cloudflare Pages 新建项目，连接 GitHub 仓库：
+如果你的站点地址类似 `kite-blog.3085197557.workers.dev`，你正在使用 Workers，请优先看 Workers 配置。
+
+## Workers 配置
+
+构建命令：
+
+```bash
+pnpm run build
+```
+
+部署命令：
+
+```bash
+pnpm run deploy:worker
+```
+
+Wrangler 使用 `wrangler.jsonc`：
+
+- `main`: `./worker.ts`
+- `assets.directory`: `./dist`
+- `assets.binding`: `ASSETS`
+- `run_worker_first`: `/api/*`
+
+Cloudflare Worker 里还必须配置：
+
+```text
+KITEBLOG_ADMIN_TOKEN=一段足够长的管理口令
+```
+
+以及 KV binding：
+
+```text
+Binding name: KITEBLOG_KV
+```
+
+如果缺少 KV binding，控制台会显示 `Cloudflare KV binding KITEBLOG_KV is not configured.`。如果缺少管理口令，保存云端配置、草稿和文章发布会失败。
+
+## Pages 配置
+
+如果使用 Cloudflare Pages，连接 GitHub 仓库：
 
 ```text
 ciyuan1234/Kite-Blog
 ```
 
-构建配置：
+推荐构建配置：
 
 ```text
 Framework preset: Astro
@@ -25,58 +65,43 @@ Node.js version: 22
 ```text
 PUBLIC_SITE_URL=https://kite1024.xyz
 PUBLIC_BASE_PATH=/
+KITEBLOG_ADMIN_TOKEN=一段足够长的管理口令
 ```
 
-## 云端控制台能力
-
-`/studio/` 控制台会调用这些 Cloudflare Pages Functions：
-
-- `GET /api/kite-config`：读取公开站点配置
-- `PUT /api/kite-config`：保存头像、背景、标题、简介等全站配置
-- `DELETE /api/kite-config`：重置云端站点配置
-- `POST /api/kite-drafts`：保存 Markdown 草稿
-- `GET /api/kite-drafts`：列出最近草稿元数据
-- `GET /api/kite-drafts?key=...`：读取指定草稿正文
-- `DELETE /api/kite-drafts?key=...`：删除指定草稿
-
-写入接口需要 Cloudflare 环境变量：
-
-```text
-KITEBLOG_ADMIN_TOKEN=一段足够长的随机口令
-```
-
-同时需要创建 KV namespace，并在 Pages 项目中绑定：
+KV binding：
 
 ```text
 Binding name: KITEBLOG_KV
 ```
 
-不要把 `KITEBLOG_ADMIN_TOKEN` 写入仓库。它只应该存在于 Cloudflare 的环境变量里。
+手动 Pages 部署命令：
 
-## 功能边界
+```bash
+pnpm run deploy:pages
+```
 
-Cloudflare KV 适合保存站点配置和草稿，不适合作为完整文章发布系统的唯一数据源。正式文章仍建议提交到 `src/content/posts`，这样可以继续获得 Astro 构建、RSS、Sitemap、Pagefind 搜索和版本控制。
+## 控制台接口
+
+`/studio/` 会调用这些接口：
+
+- `GET /api/kite-config`：读取公开站点配置
+- `PUT /api/kite-config`：保存头像、背景、标题、简介、卡片效果等全站配置
+- `DELETE /api/kite-config`：重置云端站点配置
+- `POST /api/kite-drafts`：保存 Markdown 草稿
+- `GET /api/kite-drafts`：列出最近草稿
+- `GET /api/kite-drafts?key=...`：读取指定草稿正文
+- `DELETE /api/kite-drafts?key=...`：删除指定草稿
+- `POST /api/kite-posts`：发布云端文章
+- `GET /api/kite-posts`：列出云端文章
+- `GET /api/kite-posts?slug=...`：读取指定云端文章
+- `DELETE /api/kite-posts?slug=...`：删除指定云端文章
+
+云端文章会显示在 `/live/` 页面。正式长期文章仍建议提交到 `src/content/posts`，这样可以进入 Astro 构建、RSS、Sitemap、Pagefind 搜索和 Git 版本控制。
 
 ## GitHub 同步
 
-代码仍然以 GitHub 仓库为主。Cloudflare Pages 连接仓库后，建议部署分支选择 `main`。本地推送后 Cloudflare 会自动拉取、构建、发布。
+如果 Cloudflare 项目连接了 GitHub 仓库，推送到部署分支后 Cloudflare 会自动重新构建和发布。
 
-如果手动部署：
+如果你是用 `wrangler deploy` 手动部署的 Worker，GitHub 上的代码不会自动进入线上服务；需要重新运行部署命令，或者在 Cloudflare 里开启 GitHub 自动构建。
 
-```bash
-pnpm build
-pnpm deploy:cloudflare
-```
-
-首次使用 `wrangler` 手动部署时需要先登录 Cloudflare：
-
-```bash
-npx wrangler login
-```
-
-如果后续要做完整后台，可以继续扩展：
-
-- D1：保存文章、评论、登录会话
-- R2：保存头像、背景图、附件
-- Workers Access 或 GitHub OAuth：后台登录
-- GitHub API：把网页端发布的文章提交回仓库
+不要把 `KITEBLOG_ADMIN_TOKEN` 写进仓库。它只应该存在于 Cloudflare 的环境变量里。

@@ -1,3 +1,5 @@
+const DRAFT_PREFIX = "kiteblog:draft:";
+
 const jsonHeaders = {
 	"Content-Type": "application/json; charset=utf-8",
 	"Cache-Control": "no-store",
@@ -47,7 +49,7 @@ function slugify(value: string) {
 }
 
 function isDraftKey(value: string) {
-	return value.startsWith("kiteblog:draft:") && value.length <= 160;
+	return value.startsWith(DRAFT_PREFIX) && value.length <= 180;
 }
 
 function getToken(request: Request) {
@@ -83,6 +85,12 @@ function assertReady(context: PagesContext) {
 	return null;
 }
 
+function cleanText(value: unknown, fallback = "", maxLength = 240) {
+	return String(value || fallback)
+		.trim()
+		.slice(0, maxLength);
+}
+
 export async function onRequestOptions() {
 	return new Response(null, { status: 204, headers: jsonHeaders });
 }
@@ -107,13 +115,23 @@ export async function onRequestGet(context: PagesContext) {
 		return json({ ok: true, key, markdown });
 	}
 
-	const list = await kv.list({ prefix: "kiteblog:draft:", limit: 50 });
+	const list = await kv.list({ prefix: DRAFT_PREFIX, limit: 80 });
 	return json({
 		ok: true,
-		drafts: list.keys.map((item) => ({
-			key: item.name,
-			metadata: item.metadata || null,
-		})),
+		drafts: list.keys
+			.map((item) => ({
+				key: item.name,
+				metadata: item.metadata || null,
+			}))
+			.sort((a, b) =>
+				String(
+					(b.metadata as { updatedAt?: string } | null)?.updatedAt || "",
+				).localeCompare(
+					String(
+						(a.metadata as { updatedAt?: string } | null)?.updatedAt || "",
+					),
+				),
+			),
 	});
 }
 
@@ -127,11 +145,27 @@ export async function onRequestPost(context: PagesContext) {
 		return json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
 	}
 
-	const title = String(body.title || "未命名草稿")
+	const title = cleanText(
+		(body as Record<string, unknown>).title,
+		"未命名草稿",
+		160,
+	);
+	const slug = slugify(
+		cleanText((body as Record<string, unknown>).slug, title, 120),
+	);
+	const description = cleanText(
+		(body as Record<string, unknown>).description,
+		"",
+		240,
+	);
+	const category = cleanText(
+		(body as Record<string, unknown>).category,
+		"随笔",
+		80,
+	);
+	const markdown = String((body as Record<string, unknown>).markdown || "")
 		.trim()
-		.slice(0, 160);
-	const slug = slugify(String(body.slug || title));
-	const markdown = String(body.markdown || "").slice(0, 200000);
+		.slice(0, 200000);
 	if (!markdown) {
 		return json(
 			{ ok: false, error: "Draft markdown is empty." },
@@ -140,11 +174,13 @@ export async function onRequestPost(context: PagesContext) {
 	}
 
 	const now = new Date().toISOString();
-	const key = `kiteblog:draft:${now.slice(0, 10)}:${slug}`;
+	const key = `${DRAFT_PREFIX}${now.slice(0, 10)}:${slug}`;
 	await kv.put(key, markdown, {
 		metadata: {
 			title,
 			slug,
+			description,
+			category,
 			updatedAt: now,
 		},
 	});

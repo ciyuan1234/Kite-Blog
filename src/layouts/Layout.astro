@@ -1771,10 +1771,29 @@ function disableAnimation() {
 
     function setAvatar(value) {
       if (!value) return;
+      value = firstUrl(value);
       document.querySelectorAll(".profile-avatar-image img, img.profile-avatar-image").forEach(function (img) {
         img.setAttribute("src", value);
         img.setAttribute("srcset", "");
       });
+    }
+
+    function splitUrls(value) {
+      return String(value || "")
+        .split(/\n|,/)
+        .map(function (item) { return item.trim(); })
+        .filter(Boolean);
+    }
+
+    function firstUrl(value) {
+      return splitUrls(value)[0] || "";
+    }
+
+    function rotatingUrl(value) {
+      var urls = splitUrls(value);
+      if (!urls.length) return "";
+      var slot = Math.floor(Date.now() / 600000);
+      return urls[slot % urls.length];
     }
 
     function applyKitePersonalization() {
@@ -1797,8 +1816,9 @@ function disableAnimation() {
       setAvatar(data.avatarUrl);
 
       var layer = ensureLayer();
-      if (data.backgroundUrl) {
-        layer.style.backgroundImage = "url('" + String(data.backgroundUrl).replace(/'/g, "%27") + "')";
+      var backgroundUrl = rotatingUrl(data.backgroundUrl);
+      if (backgroundUrl) {
+        layer.style.backgroundImage = "url('" + String(backgroundUrl).replace(/'/g, "%27") + "')";
         document.documentElement.classList.add("kite-has-personal-bg");
       } else {
         layer.style.backgroundImage = "";
@@ -1808,6 +1828,25 @@ function disableAnimation() {
       if (data.glassStrength) {
         document.documentElement.style.setProperty("--kite-glass-strength", data.glassStrength);
       }
+      if (data.backgroundOpacity) {
+        var opacity = Math.min(0.9, Math.max(0.2, Number(data.backgroundOpacity) / 100));
+        if (Number.isFinite(opacity)) {
+          document.documentElement.style.setProperty("--kite-background-opacity", String(opacity));
+        }
+      }
+      if (data.accentHue) {
+        document.documentElement.style.setProperty("--hue", data.accentHue);
+      }
+      if (data.cardRadius) {
+        document.documentElement.style.setProperty("--kite-card-radius", data.cardRadius);
+      }
+      if (data.fontScale) {
+        var fontScale = Math.min(1.08, Math.max(0.94, Number(data.fontScale) / 100));
+        if (Number.isFinite(fontScale)) {
+          document.documentElement.style.setProperty("--kite-font-scale", String(fontScale));
+        }
+      }
+      document.documentElement.dataset.kiteCardEffect = data.cardEffect || "glass";
     }
 
     window.applyKitePersonalization = applyKitePersonalization;

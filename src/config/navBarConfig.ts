@@ -12,25 +12,29 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 			name: "文章",
 			url: "#",
 			icon: "material-symbols:article",
-			children: [LinkPresets.Archive, LinkPresets.Categories, LinkPresets.Tags],
-		},
-		{
-			name: "社区",
-			url: "#",
-			icon: "material-symbols:group",
-			children: [LinkPresets.Friends, LinkPresets.Guestbook],
+			children: [
+				LinkPresets.Archive,
+				LinkPresets.Live,
+				LinkPresets.Categories,
+				LinkPresets.Tags,
+			],
 		},
 		{
 			name: "空间",
 			url: "#",
 			icon: "material-symbols:person",
-			children: [LinkPresets.Dynamic, LinkPresets.Gallery, LinkPresets.Studio],
+			children: [
+				LinkPresets.Dynamic,
+				LinkPresets.Gallery,
+				LinkPresets.Booknav,
+				LinkPresets.Studio,
+			],
 		},
 		{
 			name: "关于",
 			url: "#",
 			icon: "material-symbols:info",
-			children: [LinkPresets.About],
+			children: [LinkPresets.About, LinkPresets.Friends, LinkPresets.Guestbook],
 		},
 		{
 			name: "链接",
@@ -63,6 +67,11 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		name: "归档",
 		url: "/archive/",
 		icon: "material-symbols:archive",
+	},
+	Live: {
+		name: "云端文章",
+		url: "/live/",
+		icon: "material-symbols:cloud-outline-rounded",
 	},
 	Categories: {
 		name: "分类",
