@@ -2,7 +2,7 @@
 title: 欢迎来到 KiteBlog
 published: 2026-08-09
 pinned: true
-description: 这是 KiteBlog 的起始文章，用来说明这个个人博客会记录什么，以及如何继续自定义。
+description: 这是 KiteBlog 的起始文章，用来说明这个个人博客会记录什么，以及如何继续发布内容。
 tags: [博客, 个人站]
 category: 随笔
 image: ./images/firefly1.avif
@@ -21,16 +21,10 @@ slug: welcome
 - RSS 和 Sitemap
 - 背景轮播、主题切换、布局切换
 - 音乐播放器
-- 网页端外观控制台
-- Cloudflare KV 草稿和云端文章发布
+- GitHub 登录的网页端文章后台
 
-## 后续怎么自定义
+## 如何发布文章
 
-常用配置集中在 `src/config`：
+打开 `/admin/`，使用 GitHub 登录后即可新增、编辑和删除文章。后台会把文章提交到 GitHub 仓库中的 `src/content/posts`，Cloudflare 自动重新部署后，文章会进入首页、归档、RSS 和搜索索引。
 
-- `profileConfig.ts`：头像、昵称、简介、GitHub、QQ、邮箱等个人链接
-- `siteConfig.ts`：站点名、域名、页面开关、文章布局
-- `backgroundWallpaper.ts`：桌面端和移动端背景图、轮播效果
-- `musicConfig.ts`：本地音乐列表或远程音乐 API
-
-如果只是想在浏览器里预览头像、背景和文案，可以打开 `/studio/`。部署到 Cloudflare 后，保存到云端的外观配置会同步给所有访客；发布到云端的文章会显示在 `/live/`。
+图片请使用外链 URL，例如图床、GitHub raw 或 Cloudflare R2 的公开链接。

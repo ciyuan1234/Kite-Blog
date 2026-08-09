@@ -1,13 +1,13 @@
 ---
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 
-const title = "控制台已迁移";
-const description = "KiteBlog 控制台已迁移到后台。";
+const title = "新建文章";
+const description = "跳转到 KiteBlog 文章编辑器。";
 ---
 
 <MainGridLayout title={title} description={description}>
-	<p>正在打开后台...</p>
+	<p>正在打开编辑器...</p>
 	<script is:inline>
-		location.replace("/admin/");
+		location.replace("/admin/posts/edit/");
 	</script>
 </MainGridLayout>

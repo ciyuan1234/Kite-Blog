@@ -12,12 +12,7 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 			name: "文章",
 			url: "#",
 			icon: "material-symbols:article",
-			children: [
-				LinkPresets.Archive,
-				LinkPresets.Live,
-				LinkPresets.Categories,
-				LinkPresets.Tags,
-			],
+			children: [LinkPresets.Archive, LinkPresets.Categories, LinkPresets.Tags],
 		},
 		{
 			name: "空间",
@@ -27,7 +22,7 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 				LinkPresets.Dynamic,
 				LinkPresets.Gallery,
 				LinkPresets.Booknav,
-				LinkPresets.Studio,
+				LinkPresets.Admin,
 			],
 		},
 		{
@@ -67,11 +62,6 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		name: "归档",
 		url: "/archive/",
 		icon: "material-symbols:archive",
-	},
-	Live: {
-		name: "云端文章",
-		url: "/live/",
-		icon: "material-symbols:cloud-outline-rounded",
 	},
 	Categories: {
 		name: "分类",
@@ -118,10 +108,10 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		icon: "material-symbols:photo-library",
 		pageKey: "gallery",
 	},
-	Studio: {
-		name: "控制台",
-		url: "/studio/",
-		icon: "material-symbols:tune-rounded",
+	Admin: {
+		name: "后台",
+		url: "/admin/",
+		icon: "material-symbols:admin-panel-settings-outline-rounded",
 	},
 	Anime: {
 		name: "追番",

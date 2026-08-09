@@ -1,0 +1,353 @@
+---
+import { Icon } from "astro-icon/components";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+const title = "编辑文章";
+const description = "KiteBlog 网页端文章编辑器。";
+---
+
+<MainGridLayout title={title} description={description}>
+	<section class="edit-shell">
+		<header class="edit-hero">
+			<div>
+				<p class="edit-kicker">Editor</p>
+				<h1 data-page-title>新建文章</h1>
+				<p data-session-state>正在检查登录状态...</p>
+			</div>
+			<div class="edit-actions">
+				<a href="/admin/posts/" class="edit-button">
+					<Icon is:inline name="material-symbols:arrow-back-rounded" />
+					文章列表
+				</a>
+				<button type="button" data-save class="edit-button primary">
+					<Icon is:inline name="material-symbols:cloud-upload-outline-rounded" />
+					保存
+				</button>
+			</div>
+		</header>
+
+		<form id="post-form" class="edit-panel">
+			<div class="field-grid">
+				<label>
+					<span>标题</span>
+					<input name="title" value="新的博客文章" required />
+				</label>
+				<label>
+					<span>Slug</span>
+					<input name="slug" value="new-post" required />
+				</label>
+				<label>
+					<span>发布日期</span>
+					<input name="published" type="date" />
+				</label>
+				<label>
+					<span>分类</span>
+					<input name="category" value="随笔" />
+				</label>
+				<label>
+					<span>标签</span>
+					<input name="tags" value="KiteBlog, 随笔" />
+				</label>
+				<label>
+					<span>封面图 URL</span>
+					<input name="image" placeholder="https://example.com/cover.jpg" />
+				</label>
+				<label class="span-2">
+					<span>摘要</span>
+					<input name="description" value="这里是文章摘要。" />
+				</label>
+				<label class="span-2">
+					<span>Markdown 正文</span>
+					<textarea name="body" rows="24" required>从这里开始写正文。</textarea>
+				</label>
+			</div>
+			<div class="edit-actions">
+				<button type="button" data-save class="edit-button primary">保存</button>
+				<button type="button" data-delete class="edit-button danger">删除</button>
+			</div>
+			<p class="edit-status" data-status>等待操作。</p>
+		</form>
+	</section>
+
+	<script is:inline>
+		const form = document.getElementById("post-form");
+		const statusEl = document.querySelector("[data-status]");
+		const sessionEl = document.querySelector("[data-session-state]");
+		const titleEl = document.querySelector("[data-page-title]");
+		const params = new URLSearchParams(location.search);
+		const editingSlug = params.get("slug") || "";
+
+		function escapeHtml(value) {
+			return String(value || "").replace(/[&<>"']/g, (char) => ({
+				"&": "&amp;",
+				"<": "&lt;",
+				">": "&gt;",
+				'"': "&quot;",
+				"'": "&#39;",
+			})[char]);
+		}
+
+		function setStatus(message, state = "info") {
+			if (!statusEl) return;
+			statusEl.textContent = message;
+			statusEl.dataset.state = state;
+		}
+
+		async function apiRequest(url, options = {}) {
+			const headers = new Headers(options.headers || {});
+			if (options.body) headers.set("Content-Type", "application/json");
+			const response = await fetch(url, { ...options, headers, cache: "no-store" });
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || payload.ok === false) {
+				throw new Error(payload.error || `请求失败：${response.status}`);
+			}
+			return payload;
+		}
+
+		function today() {
+			return new Date().toISOString().slice(0, 10);
+		}
+
+		function readForm() {
+			return {
+				title: form.elements.title.value.trim(),
+				slug: form.elements.slug.value.trim(),
+				published: form.elements.published.value || today(),
+				category: form.elements.category.value.trim(),
+				tags: form.elements.tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
+				description: form.elements.description.value.trim(),
+				image: form.elements.image.value.trim(),
+				body: form.elements.body.value.trim(),
+			};
+		}
+
+		function fillForm(post) {
+			form.elements.title.value = post.title || "";
+			form.elements.slug.value = post.slug || editingSlug;
+			form.elements.slug.readOnly = true;
+			form.elements.published.value = post.published || today();
+			form.elements.category.value = post.category || "随笔";
+			form.elements.tags.value = (post.tags || []).join(", ");
+			form.elements.description.value = post.description || "";
+			form.elements.image.value = post.image || "";
+			form.elements.body.value = post.body || "";
+			if (titleEl) titleEl.textContent = `编辑：${post.title || post.slug}`;
+		}
+
+		async function checkSession() {
+			const payload = await apiRequest("/api/admin/session");
+			if (!payload.authenticated) {
+				if (sessionEl) sessionEl.innerHTML = '<a href="/api/auth/github/start">使用 GitHub 登录</a>';
+				form.hidden = true;
+				return false;
+			}
+			if (sessionEl) sessionEl.textContent = `已登录：@${payload.user.login}`;
+			return true;
+		}
+
+		async function loadPost() {
+			if (!editingSlug) {
+				form.elements.published.value = today();
+				document.querySelector("[data-delete]").hidden = true;
+				return;
+			}
+			setStatus("正在读取文章...", "info");
+			const payload = await apiRequest(`/api/admin/posts/${encodeURIComponent(editingSlug)}`);
+			fillForm(payload.post);
+			setStatus("文章已载入。", "success");
+		}
+
+		async function savePost() {
+			const post = readForm();
+			if (!post.title || !post.slug || !post.body) {
+				setStatus("标题、Slug 和正文不能为空。", "error");
+				return;
+			}
+			setStatus("正在保存到 GitHub...", "info");
+			try {
+				if (editingSlug) {
+					await apiRequest(`/api/admin/posts/${encodeURIComponent(editingSlug)}`, {
+						method: "PUT",
+						body: JSON.stringify(post),
+					});
+				} else {
+					await apiRequest("/api/admin/posts", {
+						method: "POST",
+						body: JSON.stringify(post),
+					});
+					history.replaceState(null, "", `/admin/posts/edit/?slug=${encodeURIComponent(post.slug)}`);
+				}
+				setStatus("已提交到 GitHub，等待 Cloudflare 重新部署后前台生效。", "success");
+			} catch (error) {
+				setStatus(error.message, "error");
+			}
+		}
+
+		async function deletePost() {
+			if (!editingSlug) return;
+			if (!confirm(`确定删除 ${editingSlug} 吗？`)) return;
+			setStatus("正在删除...", "info");
+			try {
+				await apiRequest(`/api/admin/posts/${encodeURIComponent(editingSlug)}`, { method: "DELETE" });
+				location.href = "/admin/posts/";
+			} catch (error) {
+				setStatus(error.message, "error");
+			}
+		}
+
+		document.querySelectorAll("[data-save]").forEach((button) => button.addEventListener("click", savePost));
+		document.querySelector("[data-delete]")?.addEventListener("click", deletePost);
+		checkSession().then((ok) => {
+			if (ok) loadPost().catch((error) => setStatus(escapeHtml(error.message), "error"));
+		});
+	</script>
+</MainGridLayout>
+
+<style>
+	.edit-shell {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.edit-hero,
+	.edit-panel {
+		border: 1px solid var(--line-divider);
+		border-radius: var(--kite-card-radius, 14px);
+		background: color-mix(in oklch, var(--card-bg) 78%, transparent);
+		box-shadow: var(--surface-shadow);
+		backdrop-filter: saturate(1.16) blur(var(--kite-glass-strength, 16px));
+	}
+
+	.edit-hero {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: clamp(1.2rem, 3vw, 2rem);
+	}
+
+	.edit-kicker {
+		margin: 0 0 0.45rem;
+		color: var(--primary);
+		font-size: 0.78rem;
+		font-weight: 800;
+		text-transform: uppercase;
+	}
+
+	.edit-hero h1 {
+		margin: 0;
+		font-size: clamp(1.9rem, 4vw, 3.1rem);
+		line-height: 1.05;
+		letter-spacing: 0;
+	}
+
+	.edit-hero p {
+		margin: 0.5rem 0 0;
+		color: var(--content-meta);
+		line-height: 1.7;
+	}
+
+	.edit-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.65rem;
+	}
+
+	.edit-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		min-height: 2.45rem;
+		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider));
+		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
+		padding: 0.6rem 0.8rem;
+		color: var(--primary);
+		background: color-mix(in oklch, var(--primary) 10%, transparent);
+		font-weight: 800;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	.edit-button.primary {
+		color: white;
+		background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22));
+	}
+
+	.edit-button.danger {
+		color: oklch(0.56 0.18 25);
+	}
+
+	.edit-panel {
+		padding: 1rem;
+	}
+
+	.field-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0 0.85rem;
+	}
+
+	.span-2 {
+		grid-column: 1 / -1;
+	}
+
+	label {
+		display: grid;
+		gap: 0.4rem;
+		margin-bottom: 0.9rem;
+		font-weight: 700;
+	}
+
+	label span {
+		font-size: 0.84rem;
+	}
+
+	input,
+	textarea {
+		width: 100%;
+		min-width: 0;
+		border: 1px solid var(--line-divider);
+		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
+		padding: 0.75rem 0.85rem;
+		color: inherit;
+		background: color-mix(in oklch, var(--card-bg) 70%, transparent);
+		outline: none;
+	}
+
+	textarea {
+		resize: vertical;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		line-height: 1.6;
+	}
+
+	.edit-status {
+		border: 1px solid var(--line-divider);
+		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
+		padding: 0.75rem;
+		color: var(--content-meta);
+		background: color-mix(in oklch, var(--card-bg) 64%, transparent);
+		font-weight: 800;
+	}
+
+	.edit-status[data-state="success"] {
+		color: oklch(0.55 0.14 155);
+	}
+
+	.edit-status[data-state="error"] {
+		color: oklch(0.56 0.18 25);
+	}
+
+	@media (max-width: 760px) {
+		.edit-hero {
+			flex-direction: column;
+		}
+
+		.field-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.span-2 {
+			grid-column: auto;
+		}
+	}
+</style>
