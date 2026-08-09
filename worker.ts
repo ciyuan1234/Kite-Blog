@@ -48,9 +48,30 @@ type PostInput = {
 	body?: string;
 };
 
+type SiteSettingsInput = {
+	siteTitle?: string;
+	siteSubtitle?: string;
+	profileName?: string;
+	profileBio?: string;
+	avatarUrl?: string;
+	githubUrl?: string;
+	wallpaperMode?: "banner" | "fullscreen" | "overlay" | "none";
+	desktopBackgroundUrl?: string[] | string;
+	mobileBackgroundUrl?: string[] | string;
+	heroTitle?: string;
+	heroSubtitles?: string[] | string;
+	playerUrl?: string;
+	playerEnable?: boolean;
+	dimOpacity?: number | string;
+	carouselEnable?: boolean;
+};
+
 const SESSION_COOKIE = "kite_admin_session";
 const STATE_COOKIE = "kite_oauth_state";
 const POST_DIR = "src/content/posts";
+const PROFILE_CONFIG_PATH = "src/config/profileConfig.ts";
+const WALLPAPER_CONFIG_PATH = "src/config/backgroundWallpaper.ts";
+const SITE_CONFIG_PATH = "src/config/siteConfig.ts";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 
 const jsonHeaders = {
@@ -224,6 +245,57 @@ function yamlString(value: unknown) {
 	return JSON.stringify(String(value || ""));
 }
 
+function tsString(value: unknown) {
+	return JSON.stringify(String(value || ""));
+}
+
+function clampNumber(
+	value: unknown,
+	fallback: number,
+	min: number,
+	max: number,
+) {
+	const number = Number(value);
+	if (!Number.isFinite(number)) return fallback;
+	return Math.min(max, Math.max(min, number));
+}
+
+function booleanValue(value: unknown, fallback = false) {
+	if (typeof value === "boolean") return value;
+	if (value === "true") return true;
+	if (value === "false") return false;
+	return fallback;
+}
+
+function normalizeList(value: unknown, maxItems = 12) {
+	const raw = Array.isArray(value)
+		? value
+		: String(value || "").split(/\r?\n|,/);
+	return raw
+		.map((item) => cleanText(item, "", 2048))
+		.filter(Boolean)
+		.slice(0, maxItems);
+}
+
+function firstStringMatch(source: string, pattern: RegExp, fallback = "") {
+	const match = source.match(pattern);
+	return match ? match[1] : fallback;
+}
+
+function allQuotedStrings(value: string) {
+	return Array.from(value.matchAll(/"([^"]*)"/g), (match) => match[1]).filter(
+		Boolean,
+	);
+}
+
+function extractConfigValue(source: string, key: string) {
+	const match = source.match(
+		new RegExp(`${key}:\\s*(\\[[\\s\\S]*?\\]|"[^"]*")`),
+	);
+	if (!match) return [];
+	return allQuotedStrings(match[1]);
+}
+
 function normalizePostInput(input: PostInput) {
 	const title = cleanText(input.title, "未命名文章", 160);
 	const slug = sanitizeSlug(input.slug || title);
@@ -283,6 +355,220 @@ function parseFrontmatter(markdown: string) {
 		slug: sanitizeSlug(read("slug")),
 		body: body.trim(),
 	};
+}
+
+function normalizeSiteSettings(input: SiteSettingsInput) {
+	const desktopBackgroundUrl = normalizeList(input.desktopBackgroundUrl, 10);
+	const mobileBackgroundUrl = normalizeList(
+		input.mobileBackgroundUrl || input.desktopBackgroundUrl,
+		10,
+	);
+	const playerUrl = cleanText(input.playerUrl, "", 2048);
+	return {
+		siteTitle: cleanText(input.siteTitle, "KiteBlog", 80),
+		siteSubtitle: cleanText(
+			input.siteSubtitle,
+			"记录技术、生活、项目与长期思考。",
+			180,
+		),
+		profileName: cleanText(input.profileName, "Kite", 80),
+		profileBio: cleanText(
+			input.profileBio,
+			"写技术、项目、生活和一些长期问题。",
+			240,
+		),
+		avatarUrl: cleanText(input.avatarUrl, "assets/images/avatar.avif", 2048),
+		githubUrl: cleanText(
+			input.githubUrl,
+			"https://github.com/ciyuan1234",
+			2048,
+		),
+		wallpaperMode: ["banner", "fullscreen", "overlay", "none"].includes(
+			String(input.wallpaperMode),
+		)
+			? input.wallpaperMode
+			: "banner",
+		desktopBackgroundUrl,
+		mobileBackgroundUrl: mobileBackgroundUrl.length
+			? mobileBackgroundUrl
+			: desktopBackgroundUrl,
+		heroTitle: cleanText(input.heroTitle, "KiteBlog", 100),
+		heroSubtitles: normalizeList(input.heroSubtitles, 8),
+		playerUrl,
+		playerEnable: booleanValue(input.playerEnable, false) && !!playerUrl,
+		dimOpacity: clampNumber(input.dimOpacity, 0.2, 0, 0.85),
+		carouselEnable: booleanValue(input.carouselEnable, true),
+	};
+}
+
+function parseSiteSettings(
+	profileSource: string,
+	wallpaperSource: string,
+	siteSource: string,
+) {
+	return normalizeSiteSettings({
+		siteTitle: firstStringMatch(siteSource, /\btitle:\s*"([^"]*)"/),
+		siteSubtitle: firstStringMatch(siteSource, /\bsubtitle:\s*"([^"]*)"/),
+		profileName: firstStringMatch(profileSource, /\bname:\s*"([^"]*)"/),
+		profileBio: firstStringMatch(profileSource, /\bbio:\s*"([^"]*)"/),
+		avatarUrl: firstStringMatch(profileSource, /\bavatar:\s*"([^"]*)"/),
+		githubUrl: firstStringMatch(
+			profileSource,
+			/\bname:\s*"GitHub"[\s\S]*?\burl:\s*"([^"]*)"/,
+			"https://github.com/ciyuan1234",
+		),
+		wallpaperMode: firstStringMatch(
+			wallpaperSource,
+			/\bmode:\s*"(banner|fullscreen|overlay|none)"/,
+			"banner",
+		) as SiteSettingsInput["wallpaperMode"],
+		desktopBackgroundUrl: extractConfigValue(wallpaperSource, "desktop"),
+		mobileBackgroundUrl: extractConfigValue(wallpaperSource, "mobile"),
+		heroTitle: firstStringMatch(wallpaperSource, /\btitle:\s*"([^"]*)"/),
+		heroSubtitles: extractConfigValue(wallpaperSource, "subtitle"),
+		playerUrl: firstStringMatch(wallpaperSource, /\bplayerUrl:\s*"([^"]*)"/),
+		playerEnable:
+			firstStringMatch(wallpaperSource, /\bplayerEnable:\s*(true|false)/) ===
+			"true",
+		dimOpacity: firstStringMatch(wallpaperSource, /\bdimOpacity:\s*([0-9.]+)/),
+		carouselEnable:
+			firstStringMatch(
+				wallpaperSource,
+				/\bcarousel:\s*\{[\s\S]*?\benable:\s*(true|false)/,
+				"true",
+			) !== "false",
+	});
+}
+
+function tsArray(values: string[]) {
+	if (!values.length) return "[]";
+	return `[\n\t\t\t${values.map(tsString).join(",\n\t\t\t")},\n\t\t]`;
+}
+
+function buildProfileConfig(
+	settings: ReturnType<typeof normalizeSiteSettings>,
+) {
+	return `import type { ProfileConfig } from "../types/profileConfig";
+
+export const profileConfig: ProfileConfig = {
+\tavatar: ${tsString(settings.avatarUrl)},
+\tname: ${tsString(settings.profileName)},
+\tbio: ${tsString(settings.profileBio)},
+\tlinks: [
+\t\t{
+\t\t\tname: "GitHub",
+\t\t\ticon: "fa7-brands:github",
+\t\t\turl: ${tsString(settings.githubUrl)},
+\t\t\tshowName: false,
+\t\t},
+\t\t{
+\t\t\tname: "RSS",
+\t\t\ticon: "fa7-solid:rss",
+\t\t\turl: "/rss/",
+\t\t\tshowName: false,
+\t\t},
+\t],
+};
+`;
+}
+
+function buildWallpaperConfig(
+	settings: ReturnType<typeof normalizeSiteSettings>,
+) {
+	const desktop = settings.desktopBackgroundUrl.length
+		? settings.desktopBackgroundUrl
+		: ["assets/images/DesktopWallpaper/d1.avif"];
+	const mobile = settings.mobileBackgroundUrl.length
+		? settings.mobileBackgroundUrl
+		: desktop;
+	const subtitles = settings.heroSubtitles.length
+		? settings.heroSubtitles
+		: [settings.siteSubtitle];
+	return `import type { BackgroundWallpaperConfig } from "@/types/backgroundWallpaper";
+
+export const backgroundWallpaper: BackgroundWallpaperConfig = {
+\tmode: ${tsString(settings.wallpaperMode)} as BackgroundWallpaperConfig["mode"],
+\tplayerEnable: ${settings.playerEnable},
+\tsrc: {
+\t\tdesktop: ${tsArray(desktop)},
+\t\tmobile: ${tsArray(mobile)},
+\t\tplayerUrl: ${tsString(settings.playerUrl)},
+\t},
+\tcommon: {
+\t\tdimOpacity: ${settings.dimOpacity},
+\t\tplayerMode: "random",
+\t\thomeText: {
+\t\t\tenable: true,
+\t\t\ttitle: ${tsString(settings.heroTitle)},
+\t\t\ttitleSize: "4.5rem",
+\t\t\tsubtitle: ${tsArray(subtitles)},
+\t\t\tsubtitleSize: "1.5rem",
+\t\t\ttypewriter: {
+\t\t\t\tenable: true,
+\t\t\t\tspeed: 70,
+\t\t\t\tdeleteSpeed: 35,
+\t\t\t\tpauseTime: 2000,
+\t\t\t},
+\t\t},
+\t\tpostInfo: {
+\t\t\tmode: "description",
+\t\t},
+\t\tnavbar: {
+\t\t\ttransparentMode: "semi",
+\t\t\tblur: 5,
+\t\t},
+\t\twaves: {
+\t\t\tenable: {
+\t\t\t\tdesktop: true,
+\t\t\t\tmobile: true,
+\t\t\t},
+\t\t},
+\t\tgradient: {
+\t\t\tenable: {
+\t\t\t\tdesktop: true,
+\t\t\t\tmobile: true,
+\t\t\t},
+\t\t\theight: "10%",
+\t\t},
+\t\tcarousel: {
+\t\t\tenable: ${settings.carouselEnable},
+\t\t\tinterval: 7000,
+\t\t\ttransitionEffect: "kenburns",
+\t\t},
+\t},
+\tbanner: {
+\t\tposition: "0% 20%",
+\t},
+\toverlay: {
+\t\tzIndex: -1,
+\t\topacity: 0.8,
+\t\tblur: 10,
+\t\tcardOpacity: 0.5,
+\t},
+\tfullscreen: {
+\t\tposition: "center",
+\t},
+};
+`;
+}
+
+function patchSiteConfig(
+	source: string,
+	settings: ReturnType<typeof normalizeSiteSettings>,
+) {
+	let next = source.replace(
+		/(\btitle:\s*)"[^"]*"/,
+		`$1${tsString(settings.siteTitle)}`,
+	);
+	next = next.replace(
+		/(\bsubtitle:\s*)"[^"]*"/,
+		`$1${tsString(settings.siteSubtitle)}`,
+	);
+	next = next.replace(
+		/(navbar:\s*\{[\s\S]*?\btitle:\s*)"[^"]*"/,
+		`$1${tsString(settings.siteTitle)}`,
+	);
+	return next;
 }
 
 function githubHeaders(env: Env, accept = "application/vnd.github+json") {
@@ -620,6 +906,63 @@ async function handleAdminPosts(request: Request, env: Env, slug?: string) {
 	return json({ ok: false, error: "Method not allowed." }, { status: 405 });
 }
 
+async function handleAdminSettings(request: Request, env: Env) {
+	const session = await requireSession(request, env);
+	if (!session)
+		return json({ ok: false, error: "Unauthorized." }, { status: 401 });
+
+	const [profileFile, wallpaperFile, siteFile] = await Promise.all([
+		getGitHubFile(env, PROFILE_CONFIG_PATH),
+		getGitHubFile(env, WALLPAPER_CONFIG_PATH),
+		getGitHubFile(env, SITE_CONFIG_PATH),
+	]);
+
+	if (request.method === "GET") {
+		return json({
+			ok: true,
+			settings: parseSiteSettings(
+				profileFile.content,
+				wallpaperFile.content,
+				siteFile.content,
+			),
+		});
+	}
+
+	if (request.method === "PUT") {
+		const body = (await request
+			.json()
+			.catch(() => null)) as SiteSettingsInput | null;
+		if (!body || typeof body !== "object") {
+			return json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
+		}
+		const settings = normalizeSiteSettings(body);
+		await commitGitHubFile(
+			env,
+			PROFILE_CONFIG_PATH,
+			buildProfileConfig(settings),
+			"config: update profile settings",
+			profileFile.sha,
+		);
+		await commitGitHubFile(
+			env,
+			WALLPAPER_CONFIG_PATH,
+			buildWallpaperConfig(settings),
+			"config: update wallpaper settings",
+			wallpaperFile.sha,
+		);
+		await commitGitHubFile(
+			env,
+			SITE_CONFIG_PATH,
+			patchSiteConfig(siteFile.content, settings),
+			"config: update site settings",
+			siteFile.sha,
+		);
+		return json({ ok: true, settings });
+	}
+
+	return json({ ok: false, error: "Method not allowed." }, { status: 405 });
+}
+
 async function handleApi(request: Request, env: Env) {
 	const url = new URL(request.url);
 	const pathname = url.pathname.replace(/\/$/, "");
@@ -645,6 +988,8 @@ async function handleApi(request: Request, env: Env) {
 		if (pathname === "/api/auth/logout") return logout();
 		if (pathname === "/api/admin/session") return handleSession(request, env);
 		if (pathname === "/api/admin/posts") return handleAdminPosts(request, env);
+		if (pathname === "/api/admin/settings")
+			return handleAdminSettings(request, env);
 		const postMatch = pathname.match(/^\/api\/admin\/posts\/([^/]+)$/);
 		if (postMatch)
 			return handleAdminPosts(request, env, decodeURIComponent(postMatch[1]));

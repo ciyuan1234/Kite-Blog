@@ -61,6 +61,8 @@ https://kite-blog.3085197557.workers.dev/api/auth/github/callback
 - `GET /api/auth/github/callback`
 - `POST /api/auth/logout`
 - `GET /api/admin/session`
+- `GET /api/admin/settings`
+- `PUT /api/admin/settings`
 - `GET /api/admin/posts`
 - `GET /api/admin/posts/:slug`
 - `POST /api/admin/posts`
@@ -68,6 +70,14 @@ https://kite-blog.3085197557.workers.dev/api/auth/github/callback
 - `DELETE /api/admin/posts/:slug`
 
 新增文章会创建 `src/content/posts/{slug}.md`。编辑和删除会直接提交到 GitHub。Cloudflare 连接 GitHub 自动部署后，提交完成后会自动重新构建，文章随后进入首页、归档、RSS、Sitemap 和 Pagefind 搜索。
+
+站点设置会更新这些配置文件：
+
+- `src/config/profileConfig.ts`
+- `src/config/backgroundWallpaper.ts`
+- `src/config/siteConfig.ts`
+
+头像、背景和首页文案保存后同样需要等待 Cloudflare 自动部署完成，手机和其他浏览器才会看到最新版本。
 
 ## 注意事项
 

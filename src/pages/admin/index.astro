@@ -68,6 +68,7 @@ const description = "KiteBlog 的网页端文章管理后台。";
 						</div>
 					</div>`;
 					actions.innerHTML = `<a href="/admin/posts/" class="admin-button primary">管理文章</a>
+						<a href="/admin/settings/" class="admin-button">站点设置</a>
 						<button type="button" class="admin-button" data-logout>退出</button>`;
 					document.querySelector("[data-logout]")?.addEventListener("click", logout);
 				}

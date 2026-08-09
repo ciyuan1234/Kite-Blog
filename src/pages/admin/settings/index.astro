@@ -1,0 +1,402 @@
+---
+import { Icon } from "astro-icon/components";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+const title = "站点设置";
+const description = "KiteBlog 头像、背景和首页文案设置。";
+---
+
+<MainGridLayout title={title} description={description}>
+	<section class="settings-shell">
+		<header class="settings-hero">
+			<div>
+				<p class="settings-kicker">Settings</p>
+				<h1>站点设置</h1>
+				<p data-session-state>正在检查登录状态...</p>
+			</div>
+			<div class="settings-actions">
+				<a href="/admin/posts/" class="settings-button">
+					<Icon is:inline name="material-symbols:article-outline-rounded" />
+					文章
+				</a>
+				<a href="/admin/" class="settings-button">
+					<Icon is:inline name="material-symbols:admin-panel-settings-outline-rounded" />
+					后台
+				</a>
+			</div>
+		</header>
+
+		<form class="settings-panel" data-settings-form hidden>
+			<div class="settings-grid">
+				<label>
+					<span>博客名称</span>
+					<input data-field="siteTitle" maxlength="80" />
+				</label>
+				<label>
+					<span>博客副标题</span>
+					<input data-field="siteSubtitle" maxlength="180" />
+				</label>
+				<label>
+					<span>头像地址</span>
+					<input data-field="avatarUrl" placeholder="https://..." />
+				</label>
+				<label>
+					<span>显示名称</span>
+					<input data-field="profileName" maxlength="80" />
+				</label>
+				<label class="wide">
+					<span>个人简介</span>
+					<textarea data-field="profileBio" rows="3" maxlength="240"></textarea>
+				</label>
+				<label>
+					<span>GitHub 链接</span>
+					<input data-field="githubUrl" placeholder="https://github.com/ciyuan1234" />
+				</label>
+				<label>
+					<span>壁纸模式</span>
+					<select data-field="wallpaperMode">
+						<option value="banner">横幅</option>
+						<option value="fullscreen">全屏</option>
+						<option value="overlay">透明覆盖</option>
+						<option value="none">关闭</option>
+					</select>
+				</label>
+				<label class="wide">
+					<span>桌面背景地址</span>
+					<textarea data-field="desktopBackgroundUrl" rows="4" placeholder="每行一个图片 URL 或本地路径"></textarea>
+				</label>
+				<label class="wide">
+					<span>手机背景地址</span>
+					<textarea data-field="mobileBackgroundUrl" rows="4" placeholder="每行一个图片 URL 或本地路径"></textarea>
+				</label>
+				<label>
+					<span>首页标题</span>
+					<input data-field="heroTitle" maxlength="100" />
+				</label>
+				<label>
+					<span>播放器地址</span>
+					<input data-field="playerUrl" placeholder="https://...mp4" />
+				</label>
+				<label class="wide">
+					<span>首页副标题</span>
+					<textarea data-field="heroSubtitles" rows="4" placeholder="每行一句"></textarea>
+				</label>
+				<label>
+					<span>遮罩暗度</span>
+					<input data-field="dimOpacity" type="number" min="0" max="0.85" step="0.05" />
+				</label>
+				<label class="check-row">
+					<input data-field="carouselEnable" type="checkbox" />
+					<span>背景轮播</span>
+				</label>
+				<label class="check-row">
+					<input data-field="playerEnable" type="checkbox" />
+					<span>启用播放器</span>
+				</label>
+			</div>
+
+			<div class="settings-footer">
+				<p data-save-state></p>
+				<button type="submit" class="settings-button primary">
+					<Icon is:inline name="material-symbols:cloud-upload-outline-rounded" />
+					保存到 GitHub
+				</button>
+			</div>
+		</form>
+
+		<div class="settings-panel" data-empty-panel>
+			<p>正在读取设置...</p>
+		</div>
+	</section>
+
+	<script is:inline>
+		const form = document.querySelector("[data-settings-form]");
+		const emptyPanel = document.querySelector("[data-empty-panel]");
+		const stateEl = document.querySelector("[data-session-state]");
+		const saveState = document.querySelector("[data-save-state]");
+
+		function field(name) {
+			return document.querySelector(`[data-field="${name}"]`);
+		}
+
+		function setState(message, isError = false) {
+			if (!saveState) return;
+			saveState.textContent = message || "";
+			saveState.classList.toggle("error", Boolean(isError));
+		}
+
+		async function apiRequest(url, options = {}) {
+			const response = await fetch(url, { ...options, cache: "no-store" });
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || payload.ok === false) {
+				throw new Error(payload.error || `请求失败：${response.status}`);
+			}
+			return payload;
+		}
+
+		function writeField(name, value) {
+			const el = field(name);
+			if (!el) return;
+			if (el.type === "checkbox") {
+				el.checked = Boolean(value);
+				return;
+			}
+			el.value = Array.isArray(value) ? value.join("\n") : value || "";
+		}
+
+		function readField(name) {
+			const el = field(name);
+			if (!el) return "";
+			if (el.type === "checkbox") return el.checked;
+			if (["desktopBackgroundUrl", "mobileBackgroundUrl", "heroSubtitles"].includes(name)) {
+				return el.value
+					.split(/\r?\n/)
+					.map((item) => item.trim())
+					.filter(Boolean);
+			}
+			return el.value.trim();
+		}
+
+		function fill(settings) {
+			for (const key of [
+				"siteTitle",
+				"siteSubtitle",
+				"profileName",
+				"profileBio",
+				"avatarUrl",
+				"githubUrl",
+				"wallpaperMode",
+				"desktopBackgroundUrl",
+				"mobileBackgroundUrl",
+				"heroTitle",
+				"heroSubtitles",
+				"playerUrl",
+				"playerEnable",
+				"dimOpacity",
+				"carouselEnable",
+			]) {
+				writeField(key, settings[key]);
+			}
+		}
+
+		function collect() {
+			return {
+				siteTitle: readField("siteTitle"),
+				siteSubtitle: readField("siteSubtitle"),
+				profileName: readField("profileName"),
+				profileBio: readField("profileBio"),
+				avatarUrl: readField("avatarUrl"),
+				githubUrl: readField("githubUrl"),
+				wallpaperMode: readField("wallpaperMode"),
+				desktopBackgroundUrl: readField("desktopBackgroundUrl"),
+				mobileBackgroundUrl: readField("mobileBackgroundUrl"),
+				heroTitle: readField("heroTitle"),
+				heroSubtitles: readField("heroSubtitles"),
+				playerUrl: readField("playerUrl"),
+				playerEnable: readField("playerEnable"),
+				dimOpacity: readField("dimOpacity"),
+				carouselEnable: readField("carouselEnable"),
+			};
+		}
+
+		async function initSettings() {
+			try {
+				localStorage.removeItem("kiteblog:studio");
+				const session = await apiRequest("/api/admin/session");
+				if (!session.authenticated) {
+					if (stateEl) stateEl.innerHTML = '<a href="/api/auth/github/start">使用 GitHub 登录</a>';
+					if (emptyPanel) emptyPanel.innerHTML = '<p>需要登录后管理站点设置。</p>';
+					return;
+				}
+				if (stateEl) stateEl.textContent = `已登录：${session.user.login}`;
+				const payload = await apiRequest("/api/admin/settings");
+				fill(payload.settings || {});
+				if (emptyPanel) emptyPanel.hidden = true;
+				if (form) form.hidden = false;
+			} catch (error) {
+				if (emptyPanel) emptyPanel.innerHTML = `<p class="error">${error.message}</p>`;
+			}
+		}
+
+		form?.addEventListener("submit", async (event) => {
+			event.preventDefault();
+			const button = form.querySelector("button[type='submit']");
+			button.disabled = true;
+			setState("正在提交...");
+			try {
+				await apiRequest("/api/admin/settings", {
+					method: "PUT",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify(collect()),
+				});
+				localStorage.removeItem("kiteblog:studio");
+				setState("已提交到 GitHub，Cloudflare 重新部署后全站生效。");
+			} catch (error) {
+				setState(error.message, true);
+			} finally {
+				button.disabled = false;
+			}
+		});
+
+		initSettings();
+	</script>
+</MainGridLayout>
+
+<style>
+	.settings-shell {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.settings-hero,
+	.settings-panel {
+		border: 1px solid var(--line-divider);
+		border-radius: var(--kite-card-radius, 14px);
+		background: color-mix(in oklch, var(--card-bg) 78%, transparent);
+		box-shadow: var(--surface-shadow);
+		backdrop-filter: saturate(1.16) blur(var(--kite-glass-strength, 16px));
+	}
+
+	.settings-hero {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: clamp(1.2rem, 3vw, 2rem);
+	}
+
+	.settings-kicker {
+		margin: 0 0 0.45rem;
+		color: var(--primary);
+		font-size: 0.78rem;
+		font-weight: 800;
+		text-transform: uppercase;
+	}
+
+	.settings-hero h1 {
+		margin: 0;
+		font-size: clamp(1.9rem, 4vw, 3rem);
+		line-height: 1.05;
+		letter-spacing: 0;
+	}
+
+	.settings-hero p,
+	.settings-panel p {
+		margin: 0.5rem 0 0;
+		color: var(--content-meta);
+		line-height: 1.7;
+	}
+
+	.settings-actions,
+	.settings-footer {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.65rem;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.settings-button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		min-height: 2.55rem;
+		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider));
+		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
+		padding: 0.65rem 0.85rem;
+		color: var(--primary);
+		background: color-mix(in oklch, var(--primary) 10%, transparent);
+		font-weight: 800;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	.settings-button.primary {
+		color: white;
+		background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22));
+	}
+
+	.settings-button:disabled {
+		opacity: 0.55;
+		cursor: wait;
+	}
+
+	.settings-panel {
+		padding: clamp(1rem, 2vw, 1.35rem);
+	}
+
+	.settings-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 1rem;
+	}
+
+	label {
+		display: grid;
+		gap: 0.45rem;
+		min-width: 0;
+	}
+
+	label span {
+		color: var(--content-meta);
+		font-size: 0.86rem;
+		font-weight: 800;
+	}
+
+	.wide {
+		grid-column: 1 / -1;
+	}
+
+	input,
+	select,
+	textarea {
+		width: 100%;
+		border: 1px solid var(--line-divider);
+		border-radius: calc(var(--kite-card-radius, 14px) - 6px);
+		padding: 0.72rem 0.8rem;
+		color: var(--content);
+		background: color-mix(in oklch, var(--card-bg) 70%, transparent);
+		outline: none;
+	}
+
+	textarea {
+		resize: vertical;
+		line-height: 1.55;
+	}
+
+	input:focus,
+	select:focus,
+	textarea:focus {
+		border-color: var(--primary);
+	}
+
+	.check-row {
+		display: flex;
+		align-items: center;
+		gap: 0.6rem;
+	}
+
+	.check-row input {
+		width: 1rem;
+		height: 1rem;
+	}
+
+	.settings-footer {
+		margin-top: 1rem;
+	}
+
+	.error {
+		color: oklch(0.56 0.18 25) !important;
+		font-weight: 800;
+	}
+
+	@media (max-width: 720px) {
+		.settings-hero {
+			flex-direction: column;
+		}
+
+		.settings-grid {
+			grid-template-columns: 1fr;
+		}
+	}
+</style>

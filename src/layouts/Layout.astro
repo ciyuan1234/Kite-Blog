@@ -1841,16 +1841,8 @@ function disableAnimation() {
     }
 
     function applyKitePersonalization() {
-      var raw = localStorage.getItem(STORAGE_KEY);
-      var localData = {};
-      if (raw) {
-        try {
-          localData = JSON.parse(raw) || {};
-        } catch (_) {
-          localData = {};
-        }
-      }
-      var data = Object.assign({}, remoteConfig || {}, localData || {});
+      localStorage.removeItem(STORAGE_KEY);
+      var data = Object.assign({}, remoteConfig || {});
 
       setText("[data-kite-profile-name]", data.profileName);
       setText("[data-kite-profile-bio]", data.profileBio);
