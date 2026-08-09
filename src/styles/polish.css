@@ -1,0 +1,188 @@
+/* Personal visual polish layer. Keep this file scoped to surface styling. */
+
+:root {
+	--surface-shadow:
+		0 1px 1px rgb(20 31 43 / 0.035),
+		0 10px 24px rgb(20 31 43 / 0.08);
+	--surface-shadow-strong:
+		0 1px 1px rgb(20 31 43 / 0.05),
+		0 18px 42px rgb(20 31 43 / 0.12);
+	--surface-highlight: color-mix(in oklch, var(--primary) 18%, white);
+	--surface-warm: oklch(0.86 0.1 75);
+	--surface-rose: oklch(0.74 0.13 18);
+}
+
+:root.dark {
+	--surface-shadow:
+		0 1px 1px rgb(0 0 0 / 0.18),
+		0 14px 32px rgb(0 0 0 / 0.32);
+	--surface-shadow-strong:
+		0 1px 1px rgb(0 0 0 / 0.22),
+		0 22px 54px rgb(0 0 0 / 0.44);
+	--surface-highlight: color-mix(in oklch, var(--primary) 26%, black);
+	--surface-warm: oklch(0.7 0.1 75);
+	--surface-rose: oklch(0.68 0.13 18);
+}
+
+body {
+	background:
+		linear-gradient(135deg, color-mix(in oklch, var(--primary) 10%, transparent), transparent 38%),
+		linear-gradient(180deg, color-mix(in oklch, var(--surface-warm) 9%, transparent), transparent 42%),
+		var(--page-bg);
+	text-rendering: optimizeLegibility;
+}
+
+:root.dark body {
+	background:
+		linear-gradient(135deg, color-mix(in oklch, var(--primary) 16%, transparent), transparent 42%),
+		linear-gradient(180deg, rgb(255 255 255 / 0.035), transparent 38%),
+		var(--page-bg);
+}
+
+#main-grid {
+	gap: clamp(0.875rem, 1.4vw, 1.375rem);
+}
+
+#navbar > div {
+	border-color: color-mix(in oklch, var(--line-divider) 70%, transparent);
+	box-shadow: var(--surface-shadow);
+}
+
+#navbar.navbar-sticky-shadow > div {
+	box-shadow: var(--surface-shadow-strong) !important;
+}
+
+.card-base,
+.card-base-transparent,
+.float-panel,
+.dropdown-content {
+	border: 1px solid var(--line-divider);
+	box-shadow: var(--surface-shadow);
+}
+
+.card-base,
+.card-base-transparent {
+	backdrop-filter: saturate(1.15) blur(14px);
+}
+
+.post-card-wrapper {
+	isolation: isolate;
+	transition:
+		transform 180ms ease,
+		box-shadow 180ms ease,
+		border-color 180ms ease,
+		background-color 180ms ease;
+}
+
+.post-card-wrapper::before {
+	content: "";
+	position: absolute;
+	inset: 0 0 auto;
+	height: 3px;
+	z-index: 2;
+	background: linear-gradient(90deg, var(--primary), var(--surface-warm), var(--surface-rose));
+	opacity: 0;
+	transition: opacity 180ms ease;
+}
+
+.post-card-wrapper:hover {
+	transform: translateY(-3px);
+	box-shadow: var(--surface-shadow-strong);
+	border-color: color-mix(in oklch, var(--primary) 36%, var(--line-divider));
+}
+
+.post-card-wrapper:hover::before {
+	opacity: 1;
+}
+
+.post-card-title {
+	letter-spacing: 0;
+	line-height: 1.18;
+	text-wrap: balance;
+}
+
+.post-card-image {
+	background: color-mix(in oklch, var(--primary) 12%, black);
+}
+
+.post-card-image::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	pointer-events: none;
+	background: linear-gradient(180deg, transparent 45%, rgb(0 0 0 / 0.16));
+}
+
+.post-card-bottom-tags a,
+.post-card-bottom-tags span {
+	border: 1px solid color-mix(in oklch, var(--line-divider) 80%, transparent);
+}
+
+.profile-avatar-image {
+	border-radius: var(--radius-large);
+	box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.35);
+}
+
+.banner-title {
+	letter-spacing: 0;
+	text-shadow:
+		0 2px 8px rgb(0 0 0 / 0.34),
+		0 18px 42px rgb(0 0 0 / 0.28);
+	text-wrap: balance;
+}
+
+.banner-subtitle {
+	max-width: min(46rem, 90vw);
+	margin-inline: auto;
+	text-shadow: 0 2px 16px rgb(0 0 0 / 0.38);
+}
+
+.banner-home-text-overlay {
+	background: linear-gradient(180deg, rgb(0 0 0 / 0.16), rgb(0 0 0 / 0.08) 42%, rgb(0 0 0 / 0.18));
+}
+
+.btn-regular,
+.btn-card,
+.btn-plain {
+	transition:
+		transform 150ms ease,
+		background-color 150ms ease,
+		color 150ms ease,
+		box-shadow 150ms ease;
+}
+
+.btn-regular:hover,
+.btn-card:hover {
+	box-shadow: 0 8px 20px color-mix(in oklch, var(--primary) 16%, transparent);
+}
+
+.dropdown-item {
+	border-radius: calc(var(--radius-large) - 0.125rem);
+	margin-inline: 0.35rem;
+}
+
+.custom-md :where(blockquote, table, pre) {
+	border-radius: var(--radius-large);
+}
+
+@media (max-width: 767px) {
+	#main-grid {
+		gap: 0.875rem;
+		padding-inline: 0.75rem;
+	}
+
+	.post-card-wrapper:hover {
+		transform: none;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.post-card-wrapper,
+	.post-card-wrapper::before,
+	.btn-regular,
+	.btn-card,
+	.btn-plain {
+		transition: none;
+	}
+}

@@ -57,6 +57,9 @@ if (process.env.NODE_ENV === "development") {
 	setMaxListeners(20);
 }
 
+const siteUrl = process.env.PUBLIC_SITE_URL || siteConfig.site_url;
+const basePath = process.env.PUBLIC_BASE_PATH || "/";
+
 const adapter = process.env.CF_WORKERS
 	? cloudflare({
 			prerenderEnvironment: "node",
@@ -65,9 +68,9 @@ const adapter = process.env.CF_WORKERS
 
 // https://astro.build/config
 export default defineConfig({
-	site: siteConfig.site_url,
+	site: siteUrl,
 
-	base: "/",
+	base: basePath,
 	trailingSlash: "always",
 
 	// 字体配置 - 只加载实际使用的字体，跳过未引用的以加快构建

@@ -37,6 +37,7 @@ Firefly-docs/
 Firefly-Lite/
 
 cache/
+.pnpm-store/
 package/
 .obsidian/
 

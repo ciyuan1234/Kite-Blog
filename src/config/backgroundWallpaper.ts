@@ -4,7 +4,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	// 壁纸模式："banner" 横幅壁纸，"fullscreen" 全屏壁纸，"overlay" 全屏透明，"none" 纯色背景无壁纸
 	mode: "banner",
 	// 是否启用背景视频播放，配置后将在导航栏显示视频播放按钮
-	playerEnable: true,
+	playerEnable: false,
 	/**
 	 * 背景图片配置
 	 * 图片路径支持三种格式：
@@ -60,7 +60,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		// 支持单个视频路径（字符串）或多个视频循环（数组，参考上面壁纸配置）
 		// 支持远程视频URL，本地视频请放在 public/assets/videos/ 目录下
 		// playerUrl: "/assets/videos/firefly.mp4",
-		playerUrl: "https://bed.twoleaf.cn/file/1785658612716_firefly.mp4",
+		playerUrl: "",
 	},
 	// 横幅壁纸和全屏壁纸共享配置
 	common: {
@@ -73,17 +73,15 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			// 是否启用主页横幅文字
 			enable: true,
 			// 主页横幅主标题
-			title: "Lovely firefly!",
+			title: "ciyuan1234 Blog",
 			// 主页横幅主标题字体大小
 			titleSize: "4.5rem",
 			// 主页横幅副标题
 			subtitle: [
-				"In Reddened Chrysalis, I Once Rest",
-				"From Shattered Sky, I Free Fall",
-				"Amidst Silenced Stars, I Deep Sleep",
-				"Upon Lighted Fyrefly, I Soon Gaze",
-				"From Undreamt Night, I Thence Shine",
-				"In Finalized Morrow, I Full Bloom",
+				"Writing notes for future me",
+				"Building small things with care",
+				"Collecting ideas worth revisiting",
+				"Learning in public, one post at a time",
 			],
 			// 主页横幅副标题字体大小
 			subtitleSize: "1.5rem",
@@ -93,9 +91,9 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 				// 打字机关闭 → 每次刷新随机显示一条副标题
 				enable: true,
 				// 打字速度（毫秒）
-				speed: 100,
+				speed: 70,
 				// 删除速度（毫秒）
-				deleteSpeed: 50,
+				deleteSpeed: 35,
 				// 完全显示后的暂停时间（毫秒）
 				pauseTime: 2000,
 			},
@@ -135,11 +133,11 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		// 壁纸轮播配置，横幅壁纸和全屏壁纸共享，仅在配置多张图片时生效
 		carousel: {
 			// 是否启用壁纸轮播；关闭时保持每次刷新随机显示一张
-			enable: false,
+			enable: true,
 			// 轮播切换间隔（毫秒）
-			interval: 5000,
+			interval: 7000,
 			// 过渡效果: 'fade' 渐变 | 'zoom' 缩放 | 'slide' 滑动 | 'kenburns' 旋转木马
-			transitionEffect: "zoom",
+			transitionEffect: "kenburns",
 		},
 	},
 	// Banner模式特有配置

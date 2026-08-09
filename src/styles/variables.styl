@@ -1,14 +1,14 @@
 /* ===== 基础变量定义 ===== */
 :root
-  --radius-large: 1rem
+  --radius-large: 0.5rem
   --content-delay: 150ms
 
 /* ===== 主题相关变量 ===== */
 :root
-  --primary: oklch(0.70 0.14 var(--hue))
-  --page-bg: oklch(0.95 0.01 var(--hue))
-  --card-bg: white
-  --card-bg-transparent: unquote("rgb(255 255 255 / var(--card-transparent-opacity, 0.6))")
+  --primary: oklch(0.68 0.16 var(--hue))
+  --page-bg: oklch(0.97 0.018 var(--hue))
+  --card-bg: oklch(0.995 0.004 var(--hue))
+  --card-bg-transparent: unquote("rgb(255 255 255 / var(--card-transparent-opacity, 0.76))")
   
   --btn-content: oklch(0.55 0.12 var(--hue))
   --btn-regular-bg: oklch(0.95 0.025 var(--hue))
@@ -28,8 +28,8 @@
   --deep-text: oklch(0.25 0.02 var(--hue))
   --title-active: oklch(0.6 0.1 var(--hue))
   
-  --line-divider: rgba(0, 0, 0, 0.08)
-  --line-color: rgba(0, 0, 0, 0.1)
+  --line-divider: rgba(20, 31, 43, 0.1)
+  --line-color: rgba(20, 31, 43, 0.12)
   --meta-divider: rgba(0, 0, 0, 0.2)
   --content-meta: rgba(0, 0, 0, 0.7)
   
@@ -46,7 +46,7 @@
   --link-hover: oklch(0.95 0.025 var(--hue))
   --link-active: oklch(0.90 0.05 var(--hue))
   
-  --float-panel-bg: white
+  --float-panel-bg: oklch(0.995 0.004 var(--hue))
   
   --scrollbar-bg-light: rgba(0, 0, 0, 0.4)
   --scrollbar-bg-hover-light: rgba(0, 0, 0, 0.5)
@@ -89,10 +89,10 @@
 
 /* 暗色主题变量 */
 :root.dark
-  --primary: oklch(0.75 0.14 var(--hue))
-  --page-bg: oklch(0.16 0.014 var(--hue))
-  --card-bg: oklch(0.23 0.015 var(--hue))
-  --card-bg-transparent: unquote("rgb(23 23 23 / var(--card-transparent-opacity, 0.6))")
+  --primary: oklch(0.76 0.15 var(--hue))
+  --page-bg: oklch(0.17 0.018 var(--hue))
+  --card-bg: oklch(0.235 0.018 var(--hue))
+  --card-bg-transparent: unquote("rgb(24 28 31 / var(--card-transparent-opacity, 0.74))")
   
   --btn-content: oklch(0.75 0.1 var(--hue))
   --btn-regular-bg: oklch(0.33 0.035 var(--hue))
@@ -105,8 +105,8 @@
   --btn-card-bg-hover: oklch(0.3 0.03 var(--hue))
   --btn-card-bg-active: oklch(0.35 0.035 var(--hue))
   
-  --line-divider: rgba(255, 255, 255, 0.08)
-  --line-color: rgba(255, 255, 255, 0.1)
+  --line-divider: rgba(255, 255, 255, 0.11)
+  --line-color: rgba(255, 255, 255, 0.13)
   --meta-divider: rgba(255, 255, 255, 0.2)
   --content-meta: rgba(255, 255, 255, 0.6)
   

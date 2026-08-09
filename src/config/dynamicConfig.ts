@@ -33,6 +33,6 @@ export const dynamicConfig: DynamicConfig = {
 		apiUrl: "https://memos.example.com",
 
 		// Memos 用户标识，如 "users/你的memos用户名"，用于过滤指定用户的动态
-		parent: "users/xiaye",
+		parent: "users/your-memos-user",
 	},
 };
