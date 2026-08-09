@@ -1,25 +1,20 @@
 import type { BackgroundWallpaperConfig } from "@/types/backgroundWallpaper";
 
+const sharedBackgrounds = [
+	"assets/images/DesktopWallpaper/d1.avif",
+	"assets/images/DesktopWallpaper/d2.avif",
+	"assets/images/DesktopWallpaper/d3.avif",
+	"assets/images/DesktopWallpaper/d4.avif",
+	"assets/images/DesktopWallpaper/d5.avif",
+	"assets/images/DesktopWallpaper/d6.avif",
+];
+
 export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	mode: "banner",
 	playerEnable: false,
 	src: {
-		desktop: [
-			"assets/images/DesktopWallpaper/d1.avif",
-			"assets/images/DesktopWallpaper/d2.avif",
-			"assets/images/DesktopWallpaper/d3.avif",
-			"assets/images/DesktopWallpaper/d4.avif",
-			"assets/images/DesktopWallpaper/d5.avif",
-			"assets/images/DesktopWallpaper/d6.avif",
-		],
-		mobile: [
-			"assets/images/MobileWallpaper/m1.avif",
-			"assets/images/MobileWallpaper/m2.avif",
-			"assets/images/MobileWallpaper/m3.avif",
-			"assets/images/MobileWallpaper/m4.avif",
-			"assets/images/MobileWallpaper/m5.avif",
-			"assets/images/MobileWallpaper/m6.avif",
-		],
+		desktop: sharedBackgrounds,
+		mobile: sharedBackgrounds,
 		playerUrl: "",
 	},
 	common: {
@@ -31,7 +26,7 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			titleSize: "4.5rem",
 			subtitle: [
 				"记录技术、项目与生活",
-				"把零散想法写成长期笔记",
+				"把零散想法写成长线笔记",
 				"持续构建，持续整理",
 				"在公开写作里沉淀经验",
 			],

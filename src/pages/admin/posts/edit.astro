@@ -3,7 +3,7 @@ import { Icon } from "astro-icon/components";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 
 const title = "编辑文章";
-const description = "KiteBlog 网页端 Markdown 文章编辑器。";
+const description = "KiteBlog 文章编辑器";
 ---
 
 <MainGridLayout title={title} description={description}>
@@ -19,6 +19,10 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 					<Icon is:inline name="material-symbols:arrow-back-rounded" />
 					文章列表
 				</a>
+				<a href="/admin/posts/import/" class="edit-button">
+					<Icon is:inline name="material-symbols:upload-file-rounded" />
+					导入 MD
+				</a>
 				<a href="/admin/categories/" class="edit-button">
 					<Icon is:inline name="material-symbols:category-outline-rounded" />
 					分类
@@ -30,50 +34,69 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 			</div>
 		</header>
 
-		<form id="post-form" class="edit-panel">
-			<div class="field-grid">
-				<label>
-					<span>标题</span>
-					<input name="title" value="新的博客文章" required autocomplete="off" />
-				</label>
-				<label>
-					<span>Slug</span>
-					<input name="slug" value="new-post" required autocomplete="off" />
-				</label>
-				<label>
-					<span>发布日期</span>
-					<input name="published" type="date" />
-				</label>
-				<label>
-					<span>分类</span>
-					<input name="category" value="随笔" list="category-options" autocomplete="off" />
-					<datalist id="category-options"></datalist>
-				</label>
-				<label>
-					<span>标签</span>
-					<input name="tags" value="KiteBlog, 随笔" autocomplete="off" />
-				</label>
-				<label>
-					<span>封面图 URL</span>
-					<input name="image" placeholder="https://example.com/cover.jpg" />
-				</label>
-				<label class="span-2">
-					<span>摘要</span>
-					<input name="description" value="这里是文章摘要。" autocomplete="off" />
-				</label>
-				<label class="span-2">
-					<span>Markdown 正文</span>
-					<textarea name="body" rows="26" required>从这里开始写正文。</textarea>
-				</label>
-			</div>
-			<div class="edit-footer">
-				<p class="edit-status" data-status>等待操作。</p>
-				<div class="edit-actions">
-					<button type="button" data-save class="edit-button primary">保存</button>
-					<button type="button" data-delete class="edit-button danger">删除</button>
+		<div class="edit-grid">
+			<aside class="import-panel">
+				<div class="import-dropzone" data-dropzone>
+					<input type="file" accept=".md,.mdx,.markdown,text/markdown" data-file-input hidden />
+					<Icon is:inline name="material-symbols:upload-file-rounded" class="drop-icon" />
+					<strong>拖拽 md 文件到这里</strong>
+					<p>或点击选择文件，自动填充标题、Slug、分类、标签、摘要和正文。</p>
+					<button type="button" class="edit-button" data-import>
+						<Icon is:inline name="material-symbols:file-open-rounded" />
+						选择文件
+					</button>
 				</div>
-			</div>
-		</form>
+				<div class="import-note">
+					<p>导入仅在浏览器读取文件，不会写入本地。</p>
+					<p>保存后会提交到 GitHub，Cloudflare 部署后前台同步更新。</p>
+				</div>
+			</aside>
+
+			<form id="post-form" class="edit-panel">
+				<div class="field-grid">
+					<label>
+						<span>标题</span>
+						<input name="title" value="新的博客文章" required autocomplete="off" />
+					</label>
+					<label>
+						<span>Slug</span>
+						<input name="slug" value="new-post" required autocomplete="off" />
+					</label>
+					<label>
+						<span>发布日期</span>
+						<input name="published" type="date" />
+					</label>
+					<label>
+						<span>分类</span>
+						<input name="category" value="随笔" list="category-options" autocomplete="off" />
+						<datalist id="category-options"></datalist>
+					</label>
+					<label>
+						<span>标签</span>
+						<input name="tags" value="KiteBlog, 随笔" autocomplete="off" />
+					</label>
+					<label>
+						<span>封面 URL</span>
+						<input name="image" placeholder="https://example.com/cover.jpg" />
+					</label>
+					<label class="span-2">
+						<span>摘要</span>
+						<input name="description" value="这里是文章摘要。" autocomplete="off" />
+					</label>
+					<label class="span-2">
+						<span>Markdown 正文</span>
+						<textarea name="body" rows="26" required>从这里开始写正文。</textarea>
+					</label>
+				</div>
+				<div class="edit-footer">
+					<p class="edit-status" data-status>等待操作。</p>
+					<div class="edit-actions">
+						<button type="button" data-save class="edit-button primary">保存</button>
+						<button type="button" data-delete class="edit-button danger">删除</button>
+					</div>
+				</div>
+			</form>
+		</div>
 	</section>
 
 	<script is:inline>
@@ -84,6 +107,10 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 		const categoryOptions = document.getElementById("category-options");
 		const params = new URLSearchParams(location.search);
 		const editingSlug = params.get("slug") || "";
+		const fileInput = document.querySelector("[data-file-input]");
+		const importButton = document.querySelector("[data-import]");
+		const dropzone = document.querySelector("[data-dropzone]");
+		const pendingImport = sessionStorage.getItem("kiteblog:import-post");
 
 		function escapeHtml(value) {
 			return String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -107,7 +134,7 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 			const response = await fetch(url, { ...options, headers, cache: "no-store" });
 			const payload = await response.json().catch(() => ({}));
 			if (!response.ok || payload.ok === false) {
-				throw new Error(payload.error || `请求失败：${response.status}`);
+				throw new Error(payload.error || `请求失败: ${response.status}`);
 			}
 			return payload;
 		}
@@ -139,7 +166,31 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 			form.elements.description.value = post.description || "";
 			form.elements.image.value = post.image || "";
 			form.elements.body.value = post.body || "";
-			if (titleEl) titleEl.textContent = `编辑：${post.title || post.slug}`;
+			if (titleEl) titleEl.textContent = `编辑：${post.title || post.slug || "未命名"}`;
+		}
+
+		function parseFrontmatter(markdown) {
+			const match = String(markdown || "").match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+			const meta = match ? match[1] : "";
+			const body = match ? match[2] : String(markdown || "");
+			const read = (key) => {
+				const line = meta.match(new RegExp(`^${key}:\\s*(.*)$`, "m"));
+				return line ? line[1].trim().replace(/^["']|["']$/g, "") : "";
+			};
+			const tagsMatch = meta.match(/^tags:\s*\[([\s\S]*?)\]$/m);
+			const tags = tagsMatch
+				? tagsMatch[1].split(",").map((tag) => tag.trim().replace(/^["']|["']$/g, "")).filter(Boolean)
+				: [];
+			return {
+				title: read("title"),
+				slug: read("slug"),
+				published: read("published"),
+				category: read("category"),
+				tags,
+				description: read("description"),
+				image: read("image"),
+				body: body.trim(),
+			};
 		}
 
 		async function loadCategories() {
@@ -163,6 +214,18 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 
 		async function loadPost() {
 			await loadCategories();
+			if (pendingImport) {
+				sessionStorage.removeItem("kiteblog:import-post");
+				try {
+					const imported = JSON.parse(pendingImport);
+					fillForm(imported);
+					form.elements.slug.readOnly = false;
+					setStatus("已载入导入内容。", "success");
+					return;
+				} catch {
+					sessionStorage.removeItem("kiteblog:import-post");
+				}
+			}
 			if (!editingSlug) {
 				form.elements.published.value = today();
 				document.querySelector("[data-delete]").hidden = true;
@@ -173,6 +236,53 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 			fillForm(payload.post);
 			setStatus("文章已载入。", "success");
 		}
+
+		function importMarkdown(markdown, fileName = "") {
+			const parsed = parseFrontmatter(markdown);
+			const base = fileName.replace(/\.(md|mdx|markdown)$/i, "") || "imported-post";
+			form.elements.title.value = parsed.title || base;
+			form.elements.slug.value = parsed.slug || base;
+			form.elements.slug.readOnly = false;
+			form.elements.published.value = parsed.published || today();
+			form.elements.category.value = parsed.category || "随笔";
+			form.elements.tags.value = (parsed.tags || []).join(", ");
+			form.elements.description.value = parsed.description || "";
+			form.elements.image.value = parsed.image || "";
+			form.elements.body.value = parsed.body || "";
+			if (titleEl) titleEl.textContent = `编辑：${parsed.title || base}`;
+			setStatus("已导入 Markdown 文件。", "success");
+		}
+
+		async function readFile(file) {
+			const text = await file.text();
+			importMarkdown(text, file.name);
+		}
+
+		function openFilePicker() {
+			fileInput?.click();
+		}
+
+		importButton?.addEventListener("click", openFilePicker);
+		fileInput?.addEventListener("change", async (event) => {
+			const file = event.target.files?.[0];
+			if (!file) return;
+			await readFile(file);
+			fileInput.value = "";
+		});
+		dropzone?.addEventListener("dragover", (event) => {
+			event.preventDefault();
+			dropzone.classList.add("dragover");
+		});
+		dropzone?.addEventListener("dragleave", () => {
+			dropzone.classList.remove("dragover");
+		});
+		dropzone?.addEventListener("drop", async (event) => {
+			event.preventDefault();
+			dropzone.classList.remove("dragover");
+			const file = event.dataTransfer?.files?.[0];
+			if (!file) return;
+			await readFile(file);
+		});
 
 		async function savePost() {
 			const post = readForm();
@@ -197,7 +307,7 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 					form.elements.slug.readOnly = true;
 				}
 				await loadCategories();
-				setStatus("已提交到 GitHub。Cloudflare 自动部署完成后，前台文章会更新。", "success");
+				setStatus("已提交到 GitHub，Cloudflare 部署后前台会更新。", "success");
 			} catch (error) {
 				setStatus(error.message, "error");
 			} finally {
@@ -208,7 +318,7 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 		async function deletePost() {
 			const slug = editingSlug || form.elements.slug.value.trim();
 			if (!slug) return;
-			if (!confirm(`确定删除 ${slug} 吗？删除后会提交到 GitHub。`)) return;
+			if (!confirm(`确定删除 ${slug} 吗？`)) return;
 			setStatus("正在删除...", "info");
 			try {
 				await apiRequest(`/api/admin/posts/${encodeURIComponent(slug)}`, { method: "DELETE" });
@@ -228,16 +338,28 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 
 <style>
 	.edit-shell { display: grid; gap: 1rem; }
-	.edit-header, .edit-panel {
-		border: 1px solid var(--line-divider); border-radius: 12px;
+	.edit-header, .edit-panel, .import-panel {
+		border: 1px solid var(--line-divider);
+		border-radius: 12px;
 		background: color-mix(in oklch, var(--card-bg) 82%, transparent);
-		box-shadow: var(--surface-shadow); backdrop-filter: saturate(1.14) blur(var(--kite-glass-strength, 16px));
+		box-shadow: var(--surface-shadow);
+		backdrop-filter: saturate(1.14) blur(var(--kite-glass-strength, 16px));
 	}
 	.edit-header { display: flex; justify-content: space-between; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); }
 	.eyebrow { margin: 0 0 .45rem; color: var(--primary); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
 	h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3.1rem); line-height: 1.05; letter-spacing: 0; }
 	.edit-header p { margin: .5rem 0 0; color: var(--content-meta); line-height: 1.7; }
-	.edit-actions { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; }
+	.edit-grid { display: grid; grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr); gap: 1rem; }
+	.import-panel, .edit-panel { padding: 1rem; }
+	.import-dropzone {
+		display: grid; gap: .75rem; place-items: center; text-align: center;
+		padding: 1.1rem; min-height: 17rem; border: 1px dashed var(--line-divider); border-radius: 10px;
+		background: color-mix(in oklch, var(--card-bg) 60%, transparent);
+	}
+	.import-dropzone.dragover { border-color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, var(--card-bg)); }
+	.drop-icon { font-size: 2rem; color: var(--primary); }
+	.import-note { margin-top: .9rem; color: var(--content-meta); line-height: 1.6; }
+	.edit-actions, .edit-footer { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; justify-content: space-between; }
 	.edit-button {
 		display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.45rem;
 		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider)); border-radius: 8px;
@@ -246,8 +368,6 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 	}
 	.edit-button.primary { color: white; background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22)); }
 	.edit-button.danger { color: oklch(0.56 0.18 25); }
-	.edit-button:disabled { opacity: .55; cursor: wait; }
-	.edit-panel { padding: 1rem; }
 	.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 .85rem; }
 	.span-2 { grid-column: 1 / -1; }
 	label { display: grid; gap: .4rem; margin-bottom: .9rem; font-weight: 700; }
@@ -259,12 +379,12 @@ const description = "KiteBlog 网页端 Markdown 文章编辑器。";
 	input:focus, textarea:focus { border-color: var(--primary); }
 	input[readonly] { opacity: .75; }
 	textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; line-height: 1.6; }
-	.edit-footer { display: flex; justify-content: space-between; gap: 1rem; align-items: center; flex-wrap: wrap; }
 	.edit-status {
 		flex: 1; min-width: 14rem; border: 1px solid var(--line-divider); border-radius: 8px; margin: 0;
 		padding: .75rem; color: var(--content-meta); background: color-mix(in oklch, var(--card-bg) 64%, transparent); font-weight: 800;
 	}
 	.edit-status[data-state="success"] { color: oklch(0.55 0.14 155); }
 	.edit-status[data-state="error"] { color: oklch(0.56 0.18 25); }
+	@media (max-width: 900px) { .edit-grid { grid-template-columns: 1fr; } }
 	@media (max-width: 760px) { .edit-header { flex-direction: column; } .field-grid { grid-template-columns: 1fr; } .span-2 { grid-column: auto; } .edit-actions, .edit-button { width: 100%; } }
 </style>

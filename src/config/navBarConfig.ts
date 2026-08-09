@@ -29,7 +29,12 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 			name: "关于",
 			url: "#",
 			icon: "material-symbols:info",
-			children: [LinkPresets.About, LinkPresets.Friends, LinkPresets.Guestbook],
+			children: [
+				LinkPresets.About,
+				LinkPresets.Tech,
+				LinkPresets.Friends,
+				LinkPresets.Guestbook,
+			],
 		},
 		{
 			name: "链接",
@@ -95,6 +100,11 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		name: "关于",
 		url: "/about/",
 		icon: "material-symbols:person",
+	},
+	Tech: {
+		name: "技术文档",
+		url: "/tech/",
+		icon: "material-symbols:description",
 	},
 	Bangumi: {
 		name: "Bangumi",
