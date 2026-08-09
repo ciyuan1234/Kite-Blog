@@ -1746,6 +1746,39 @@ function disableAnimation() {
 </script>
 
 <script is:inline data-swup-ignore-script>
+	(function initKiteAdminNativeNavigation() {
+		document.addEventListener(
+			"click",
+			function (event) {
+				if (event.defaultPrevented || event.button !== 0) return;
+				if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+				var target = event.target;
+				if (!target || !target.closest) return;
+				var link = target.closest("a[href]");
+				if (!link) return;
+				var href = link.getAttribute("href") || "";
+				var url;
+				try {
+					url = new URL(href, window.location.href);
+				} catch (_) {
+					return;
+				}
+				if (url.origin !== window.location.origin) return;
+				var path = url.pathname;
+				var isAdminPath = path === "/admin" || path.startsWith("/admin/");
+				var isAdminApiPath =
+					path.startsWith("/api/auth/") || path.startsWith("/api/admin/");
+				if (!isAdminPath && !isAdminApiPath) return;
+				event.preventDefault();
+				event.stopImmediatePropagation();
+				window.location.href = url.href;
+			},
+			true,
+		);
+	})();
+</script>
+
+<script is:inline data-swup-ignore-script>
   (function initKitePersonalization() {
     var STORAGE_KEY = "kiteblog:studio";
     var remoteConfig = null;

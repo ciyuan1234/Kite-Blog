@@ -112,6 +112,7 @@ export const LinkPresets: Record<string, NavBarLink> = {
 		name: "后台",
 		url: "/admin/",
 		icon: "material-symbols:admin-panel-settings-outline-rounded",
+		noSwup: true,
 	},
 	Anime: {
 		name: "追番",

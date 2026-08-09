@@ -42,6 +42,7 @@ const hasChildren = processedLink.children && processedLink.children.length > 0;
 					<DropdownItem
 						href={child.external ? child.url : url(child.url)}
 						target={child.external ? "_blank" : undefined}
+						noSwup={child.noSwup}
 						isLast={index === (processedLink.children?.length || 0) - 1}
 						class="dropdown-item focus-ring-inset h-10"
 					>
@@ -59,6 +60,7 @@ const hasChildren = processedLink.children && processedLink.children.length > 0;
 			aria-label={processedLink.name} 
 			href={processedLink.external ? processedLink.url : url(processedLink.url)} 
 			target={processedLink.external ? "_blank" : null}
+			data-no-swup={processedLink.noSwup ? "true" : undefined}
 			class="btn-plain scale-animation rounded-lg h-10 font-bold px-4 active:scale-95"
 		>
 			<div class="flex items-center gap-1.5">
