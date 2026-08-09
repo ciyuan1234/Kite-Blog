@@ -30,6 +30,10 @@ const description =
 					<Icon is:inline name="material-symbols:cloud-outline-rounded" />
 					云端文章
 				</a>
+				<a href="/studio/editor/" class="studio-link">
+					<Icon is:inline name="material-symbols:edit-square-outline-rounded" />
+					独立编辑器
+				</a>
 			</div>
 		</header>
 
@@ -688,6 +692,7 @@ ${draft.markdown}
 						</div>
 						<div class="cloud-actions">
 							<button type="button" data-draft-load="${escapeHtml(item.key)}">载入</button>
+							<a href="/studio/editor/?draft=${encodeURIComponent(item.key)}">独立编辑</a>
 							<button type="button" data-draft-delete="${escapeHtml(item.key)}">删除</button>
 						</div>
 					</div>`;
@@ -712,6 +717,7 @@ ${draft.markdown}
 						</div>
 						<div class="cloud-actions">
 							<a href="/live/#${escapeHtml(item.slug)}">查看</a>
+							<a href="/studio/editor/?slug=${encodeURIComponent(item.slug)}">编辑</a>
 							<button type="button" data-post-delete="${escapeHtml(item.slug)}">删除</button>
 						</div>
 					</div>`;

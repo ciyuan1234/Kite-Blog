@@ -1,0 +1,623 @@
+---
+import { Icon } from "astro-icon/components";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+const title = "文章编辑器";
+const description = "KiteBlog 云端文章新增、编辑、删除和 Markdown 预览。";
+---
+
+<MainGridLayout title={title} description={description}>
+	<section class="editor-shell">
+		<header class="editor-hero">
+			<div>
+				<p class="editor-kicker">KiteBlog Editor</p>
+				<h1>文章编辑器</h1>
+				<p>用于新增、修改和删除 Cloudflare KV 云端文章。静态正式文章仍建议提交到 GitHub。</p>
+			</div>
+			<div class="editor-links">
+				<a href="/studio/">
+					<Icon is:inline name="material-symbols:tune-rounded" />
+					控制台
+				</a>
+				<a href="/live/">
+					<Icon is:inline name="material-symbols:public-rounded" />
+					云端文章
+				</a>
+			</div>
+		</header>
+
+		<div class="editor-layout">
+			<aside class="editor-side">
+				<section class="editor-panel">
+					<div class="panel-heading">
+						<Icon is:inline name="material-symbols:key-outline-rounded" />
+						<div>
+							<h2>连接</h2>
+							<p>口令只保存在当前浏览器。</p>
+						</div>
+					</div>
+					<label>
+						<span>Cloudflare 管理口令</span>
+						<input
+							name="adminToken"
+							type="password"
+							autocomplete="current-password"
+							placeholder="KITEBLOG_ADMIN_TOKEN"
+							data-admin-token
+						/>
+					</label>
+					<p class="editor-status" data-editor-status>等待操作。</p>
+					<div class="button-row vertical">
+						<button type="button" data-refresh-posts>
+							<Icon is:inline name="material-symbols:refresh-rounded" />
+							刷新文章
+						</button>
+						<button type="button" data-new-post>
+							<Icon is:inline name="material-symbols:add-circle-outline-rounded" />
+							新建文章
+						</button>
+					</div>
+				</section>
+
+				<section class="editor-panel">
+					<div class="panel-heading">
+						<Icon is:inline name="material-symbols:library-books-outline-rounded" />
+						<div>
+							<h2>云端文章</h2>
+							<p data-post-count>正在读取...</p>
+						</div>
+					</div>
+					<div class="post-list" data-post-list></div>
+				</section>
+			</aside>
+
+			<main class="editor-panel editor-main">
+				<div class="panel-heading">
+					<Icon is:inline name="material-symbols:edit-document-outline-rounded" />
+					<div>
+						<h2>正文</h2>
+						<p>保存会覆盖同 slug 的云端文章；删除只删除云端文章，不影响 GitHub 静态文章。</p>
+					</div>
+				</div>
+
+				<form id="post-editor" class="editor-form">
+					<div class="field-grid">
+						<label>
+							<span>标题</span>
+							<input name="title" value="新的博客文章" />
+						</label>
+						<label>
+							<span>Slug</span>
+							<input name="slug" value="new-post" />
+						</label>
+						<label>
+							<span>分类</span>
+							<input name="category" value="随笔" />
+						</label>
+						<label>
+							<span>标签，用逗号分隔</span>
+							<input name="tags" value="KiteBlog, 随笔" />
+						</label>
+						<label class="span-2">
+							<span>封面图 URL 或路径</span>
+							<input name="cover" placeholder="https://example.com/cover.jpg" />
+						</label>
+						<label class="span-2">
+							<span>摘要</span>
+							<input name="description" value="这里是文章摘要。" />
+						</label>
+					</div>
+					<label>
+						<span>Markdown 正文</span>
+						<textarea name="markdown" rows="22">从这里开始写正文。</textarea>
+					</label>
+				</form>
+
+				<div class="button-row">
+					<button type="button" data-save-post class="primary-action">
+						<Icon is:inline name="material-symbols:cloud-upload-outline-rounded" />
+						保存 / 更新
+					</button>
+					<button type="button" data-delete-post>
+						<Icon is:inline name="material-symbols:delete-outline-rounded" />
+						删除当前文章
+					</button>
+					<button type="button" data-copy-markdown>
+						<Icon is:inline name="material-symbols:content-copy-outline-rounded" />
+						复制 Markdown
+					</button>
+				</div>
+
+				<section class="preview-box">
+					<span data-preview-category>随笔</span>
+					<h2 data-preview-title>新的博客文章</h2>
+					<p data-preview-desc>这里是文章摘要。</p>
+				</section>
+			</main>
+		</div>
+	</section>
+
+	<script is:inline>
+		const TOKEN_KEY = "kiteblog:admin-token";
+		const form = document.getElementById("post-editor");
+		const statusEl = document.querySelector("[data-editor-status]");
+		const tokenInput = document.querySelector("[data-admin-token]");
+		const postList = document.querySelector("[data-post-list]");
+		const postCount = document.querySelector("[data-post-count]");
+		const params = new URLSearchParams(location.search);
+		let currentSlug = params.get("slug") || "";
+
+		function setStatus(message, state = "info") {
+			if (!statusEl) return;
+			statusEl.textContent = message;
+			statusEl.dataset.state = state;
+		}
+
+		function escapeHtml(value) {
+			return String(value || "").replace(/[&<>"']/g, (char) => ({
+				"&": "&amp;",
+				"<": "&lt;",
+				">": "&gt;",
+				'"': "&quot;",
+				"'": "&#39;",
+			})[char]);
+		}
+
+		function quoteYaml(value) {
+			return JSON.stringify(String(value || ""));
+		}
+
+		function getValue(name) {
+			return form?.elements[name]?.value?.trim?.() || "";
+		}
+
+		function getRaw(name) {
+			return form?.elements[name]?.value || "";
+		}
+
+		function getToken() {
+			const token = tokenInput?.value?.trim?.() || "";
+			if (token) localStorage.setItem(TOKEN_KEY, token);
+			return token || localStorage.getItem(TOKEN_KEY) || "";
+		}
+
+		async function apiRequest(url, options = {}) {
+			const headers = new Headers(options.headers || {});
+			headers.set("Accept", "application/json");
+			if (options.body) headers.set("Content-Type", "application/json");
+			const token = getToken();
+			if (token) headers.set("Authorization", `Bearer ${token}`);
+			const response = await fetch(url, { ...options, headers, cache: "no-store" });
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || payload.ok === false) {
+				throw new Error(payload.error || `请求失败：${response.status}`);
+			}
+			return payload;
+		}
+
+		function readPost() {
+			const tags = (getValue("tags") || "")
+				.split(",")
+				.map((tag) => tag.trim())
+				.filter(Boolean);
+			return {
+				title: getValue("title") || "新的博客文章",
+				slug: getValue("slug") || "new-post",
+				category: getValue("category") || "随笔",
+				tags,
+				cover: getValue("cover"),
+				description: getValue("description"),
+				publishedAt: new Date().toISOString().slice(0, 10),
+				markdown: buildMarkdown(),
+			};
+		}
+
+		function buildMarkdown() {
+			const body = getRaw("markdown");
+			const tags = (getValue("tags") || "")
+				.split(",")
+				.map((tag) => tag.trim())
+				.filter(Boolean)
+				.map(quoteYaml)
+				.join(", ");
+			return `---
+title: ${quoteYaml(getValue("title") || "新的博客文章")}
+published: ${new Date().toISOString().slice(0, 10)}
+description: ${quoteYaml(getValue("description"))}
+tags: [${tags}]
+category: ${quoteYaml(getValue("category") || "随笔")}
+image: ${quoteYaml(getValue("cover"))}
+slug: ${quoteYaml(getValue("slug") || "new-post")}
+---
+
+${body}
+`;
+		}
+
+		function fillPost(post) {
+			if (!form || !post) return;
+			form.elements.title.value = post.title || "新的博客文章";
+			form.elements.slug.value = post.slug || "new-post";
+			form.elements.category.value = post.category || "随笔";
+			form.elements.tags.value = Array.isArray(post.tags) ? post.tags.join(", ") : post.tags || "";
+			form.elements.cover.value = post.cover || "";
+			form.elements.description.value = post.description || "";
+			form.elements.markdown.value = stripFrontmatter(post.markdown || "");
+			currentSlug = post.slug || "";
+			updatePreview();
+		}
+
+		function stripFrontmatter(markdown) {
+			return String(markdown || "").replace(/^---\n[\s\S]*?\n---\n?/, "").trim();
+		}
+
+		function updatePreview() {
+			document.querySelector("[data-preview-title]").textContent = getValue("title") || "新的博客文章";
+			document.querySelector("[data-preview-desc]").textContent = getValue("description") || "暂无摘要";
+			document.querySelector("[data-preview-category]").textContent = getValue("category") || "随笔";
+		}
+
+		async function listPosts() {
+			setStatus("正在读取云端文章...", "info");
+			try {
+				const payload = await apiRequest("/api/kite-posts");
+				const posts = payload.posts || [];
+				if (postCount) postCount.textContent = `${posts.length} 篇文章`;
+				if (!postList) return;
+				postList.innerHTML = posts.length
+					? posts.map((item) => `<button type="button" data-load-post="${escapeHtml(item.slug)}" class="${item.slug === currentSlug ? "active" : ""}">
+							<strong>${escapeHtml(item.title || item.slug)}</strong>
+							<span>${escapeHtml(item.category || "文章")} · ${escapeHtml(item.publishedAt || "")}</span>
+						</button>`).join("")
+					: '<p class="empty-state">暂无云端文章。</p>';
+				setStatus("文章列表已刷新。", "success");
+			} catch (error) {
+				if (postList) postList.innerHTML = `<p class="error-text">${escapeHtml(error.message)}</p>`;
+				setStatus(`文章读取失败：${error.message}`, "error");
+			}
+		}
+
+		async function loadPost(slug) {
+			if (!slug) return;
+			setStatus("正在载入文章...", "info");
+			try {
+				const payload = await apiRequest(`/api/kite-posts?slug=${encodeURIComponent(slug)}`);
+				fillPost(payload.post);
+				history.replaceState(null, "", `?slug=${encodeURIComponent(payload.post.slug)}`);
+				setStatus("文章已载入，可以继续编辑。", "success");
+				await listPosts();
+			} catch (error) {
+				setStatus(`文章载入失败：${error.message}`, "error");
+			}
+		}
+
+		async function loadDraft(key) {
+			if (!key) return;
+			setStatus("正在载入草稿...", "info");
+			try {
+				const payload = await apiRequest(`/api/kite-drafts?key=${encodeURIComponent(key)}`);
+				form.elements.markdown.value = stripFrontmatter(payload.markdown || "");
+				setStatus("草稿正文已载入。", "success");
+				updatePreview();
+			} catch (error) {
+				setStatus(`草稿载入失败：${error.message}`, "error");
+			}
+		}
+
+		async function savePost() {
+			const post = readPost();
+			setStatus("正在保存文章...", "info");
+			try {
+				const payload = await apiRequest("/api/kite-posts", {
+					method: "POST",
+					body: JSON.stringify(post),
+				});
+				currentSlug = payload.post.slug;
+				history.replaceState(null, "", `?slug=${encodeURIComponent(currentSlug)}`);
+				setStatus("文章已保存。", "success");
+				await listPosts();
+			} catch (error) {
+				setStatus(`保存失败：${error.message}`, "error");
+			}
+		}
+
+		async function deletePost() {
+			const slug = currentSlug || getValue("slug");
+			if (!slug) return;
+			if (!confirm("确定要删除当前云端文章吗？")) return;
+			setStatus("正在删除文章...", "info");
+			try {
+				await apiRequest(`/api/kite-posts?slug=${encodeURIComponent(slug)}`, { method: "DELETE" });
+				resetForm();
+				history.replaceState(null, "", "/studio/editor/");
+				setStatus("文章已删除。", "success");
+				await listPosts();
+			} catch (error) {
+				setStatus(`删除失败：${error.message}`, "error");
+			}
+		}
+
+		function resetForm() {
+			currentSlug = "";
+			form.reset();
+			form.elements.title.value = "新的博客文章";
+			form.elements.slug.value = "new-post";
+			form.elements.category.value = "随笔";
+			form.elements.tags.value = "KiteBlog, 随笔";
+			form.elements.description.value = "这里是文章摘要。";
+			form.elements.markdown.value = "从这里开始写正文。";
+			updatePreview();
+		}
+
+		async function copyMarkdown() {
+			await navigator.clipboard.writeText(buildMarkdown());
+			setStatus("Markdown 已复制。", "success");
+		}
+
+		const storedToken = localStorage.getItem(TOKEN_KEY);
+		if (storedToken && tokenInput) tokenInput.value = storedToken;
+		form?.addEventListener("input", updatePreview);
+		document.querySelector("[data-refresh-posts]")?.addEventListener("click", listPosts);
+		document.querySelector("[data-new-post]")?.addEventListener("click", resetForm);
+		document.querySelector("[data-save-post]")?.addEventListener("click", savePost);
+		document.querySelector("[data-delete-post]")?.addEventListener("click", deletePost);
+		document.querySelector("[data-copy-markdown]")?.addEventListener("click", copyMarkdown);
+		postList?.addEventListener("click", (event) => {
+			const target = event.target instanceof HTMLElement ? event.target.closest("[data-load-post]") : null;
+			const slug = target?.getAttribute("data-load-post");
+			if (slug) loadPost(slug);
+		});
+
+		updatePreview();
+		listPosts();
+		if (currentSlug) loadPost(currentSlug);
+		if (params.get("draft")) loadDraft(params.get("draft"));
+	</script>
+</MainGridLayout>
+
+<style>
+	.editor-shell {
+		display: grid;
+		gap: 1rem;
+	}
+
+	.editor-hero,
+	.editor-panel {
+		border: 1px solid var(--line-divider);
+		border-radius: var(--kite-card-radius, 14px);
+		background: color-mix(in oklch, var(--card-bg) 78%, transparent);
+		box-shadow: var(--surface-shadow);
+		backdrop-filter: saturate(1.16) blur(var(--kite-glass-strength, 16px));
+	}
+
+	.editor-hero {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		padding: clamp(1.2rem, 3vw, 2rem);
+	}
+
+	.editor-kicker {
+		margin: 0 0 0.45rem;
+		color: var(--primary);
+		font-size: 0.78rem;
+		font-weight: 800;
+		text-transform: uppercase;
+	}
+
+	.editor-hero h1,
+	.editor-panel h2,
+	.preview-box h2 {
+		margin: 0;
+		color: rgb(23 23 23 / 0.9);
+		letter-spacing: 0;
+	}
+
+	:global(.dark) .editor-hero h1,
+	:global(.dark) .editor-panel h2,
+	:global(.dark) .preview-box h2 {
+		color: rgb(255 255 255 / 0.9);
+	}
+
+	.editor-hero h1 {
+		font-size: clamp(1.9rem, 4vw, 3.1rem);
+		line-height: 1.05;
+	}
+
+	.editor-hero p,
+	.editor-panel p {
+		margin: 0.5rem 0 0;
+		color: var(--content-meta);
+		line-height: 1.7;
+	}
+
+	.editor-links,
+	.button-row {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.65rem;
+	}
+
+	.editor-links a,
+	button {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		gap: 0.4rem;
+		min-height: 2.55rem;
+		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider));
+		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
+		padding: 0.65rem 0.85rem;
+		color: var(--primary);
+		background: color-mix(in oklch, var(--primary) 10%, transparent);
+		font-weight: 800;
+		cursor: pointer;
+		text-decoration: none;
+	}
+
+	.primary-action {
+		color: white;
+		background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22));
+	}
+
+	.editor-layout {
+		display: grid;
+		grid-template-columns: minmax(18rem, 0.3fr) minmax(0, 1fr);
+		gap: 1rem;
+		align-items: start;
+	}
+
+	.editor-side {
+		display: grid;
+		gap: 1rem;
+		position: sticky;
+		top: 5.25rem;
+	}
+
+	.editor-panel {
+		padding: 1rem;
+	}
+
+	.panel-heading {
+		display: flex;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.panel-heading > :global(svg) {
+		color: var(--primary);
+		font-size: 1.55rem;
+		flex-shrink: 0;
+	}
+
+	.field-grid {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+		gap: 0 0.85rem;
+	}
+
+	.span-2 {
+		grid-column: 1 / -1;
+	}
+
+	label {
+		display: grid;
+		gap: 0.4rem;
+		margin-bottom: 0.9rem;
+		font-weight: 700;
+	}
+
+	label span {
+		font-size: 0.84rem;
+	}
+
+	input,
+	textarea {
+		width: 100%;
+		min-width: 0;
+		border: 1px solid var(--line-divider);
+		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
+		padding: 0.75rem 0.85rem;
+		color: inherit;
+		background: color-mix(in oklch, var(--card-bg) 70%, transparent);
+		outline: none;
+	}
+
+	textarea {
+		resize: vertical;
+		font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+		line-height: 1.6;
+	}
+
+	.vertical {
+		flex-direction: column;
+	}
+
+	.vertical button {
+		width: 100%;
+	}
+
+	.editor-status,
+	.preview-box,
+	.post-list button {
+		border: 1px solid var(--line-divider);
+		border-radius: calc(var(--kite-card-radius, 14px) - 4px);
+		background: color-mix(in oklch, var(--card-bg) 64%, transparent);
+	}
+
+	.editor-status {
+		padding: 0.75rem;
+		font-weight: 800;
+	}
+
+	.editor-status[data-state="success"] {
+		color: oklch(0.55 0.14 155);
+	}
+
+	.editor-status[data-state="error"],
+	.error-text {
+		color: oklch(0.56 0.18 25);
+		font-weight: 800;
+	}
+
+	.post-list {
+		display: grid;
+		gap: 0.65rem;
+		max-height: 28rem;
+		overflow: auto;
+	}
+
+	.post-list button {
+		display: grid;
+		gap: 0.25rem;
+		width: 100%;
+		padding: 0.75rem;
+		text-align: left;
+	}
+
+	.post-list button.active,
+	.post-list button:hover {
+		border-color: color-mix(in oklch, var(--primary) 42%, var(--line-divider));
+		background: color-mix(in oklch, var(--primary) 10%, var(--card-bg));
+	}
+
+	.post-list span,
+	.empty-state {
+		color: var(--content-meta);
+	}
+
+	.preview-box {
+		margin-top: 1rem;
+		padding: 1rem;
+	}
+
+	.preview-box span {
+		color: var(--primary);
+		font-size: 0.78rem;
+		font-weight: 800;
+	}
+
+	@media (max-width: 1020px) {
+		.editor-layout {
+			grid-template-columns: 1fr;
+		}
+
+		.editor-side {
+			position: static;
+		}
+	}
+
+	@media (max-width: 640px) {
+		.editor-hero {
+			flex-direction: column;
+		}
+
+		.field-grid {
+			grid-template-columns: 1fr;
+		}
+
+		.span-2 {
+			grid-column: auto;
+		}
+	}
+</style>

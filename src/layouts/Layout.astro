@@ -1772,9 +1772,18 @@ function disableAnimation() {
     function setAvatar(value) {
       if (!value) return;
       value = firstUrl(value);
-      document.querySelectorAll(".profile-avatar-image img, img.profile-avatar-image").forEach(function (img) {
+      document.querySelectorAll(".profile-avatar-image picture source, picture.profile-avatar-image source").forEach(function (source) {
+        source.removeAttribute("srcset");
+        source.removeAttribute("sizes");
+      });
+      document.querySelectorAll(".profile-avatar-image img, img.profile-avatar-image, picture.profile-avatar-image img").forEach(function (img) {
         img.setAttribute("src", value);
         img.setAttribute("srcset", "");
+        img.style.opacity = "1";
+        img.removeAttribute("data-astro-cid");
+      });
+      document.querySelectorAll(".profile-avatar-image .lqip-placeholder").forEach(function (placeholder) {
+        placeholder.classList.add("loaded");
       });
     }
 
@@ -1796,6 +1805,41 @@ function disableAnimation() {
       return urls[slot % urls.length];
     }
 
+    function setWallpaper(value) {
+      var backgroundUrl = rotatingUrl(value);
+      var container = document.getElementById("banner-images-container");
+      if (container && backgroundUrl) {
+        container.style.backgroundImage = "url('" + String(backgroundUrl).replace(/'/g, "%27") + "')";
+        container.style.backgroundSize = "cover";
+        container.style.backgroundPosition = "center";
+        container.classList.add("kite-custom-wallpaper");
+      } else if (container) {
+        container.style.backgroundImage = "";
+        container.classList.remove("kite-custom-wallpaper");
+      }
+
+      document.querySelectorAll("#banner-images-container picture source").forEach(function (source) {
+        if (!backgroundUrl) return;
+        source.removeAttribute("srcset");
+        source.removeAttribute("sizes");
+      });
+      document.querySelectorAll("#banner-images-container img").forEach(function (img) {
+        if (!backgroundUrl) return;
+        img.setAttribute("src", backgroundUrl);
+        img.setAttribute("srcset", "");
+        img.style.opacity = "1";
+      });
+
+      var layer = ensureLayer();
+      if (backgroundUrl) {
+        layer.style.backgroundImage = "url('" + String(backgroundUrl).replace(/'/g, "%27") + "')";
+        document.documentElement.classList.add("kite-has-personal-bg");
+      } else {
+        layer.style.backgroundImage = "";
+        document.documentElement.classList.remove("kite-has-personal-bg");
+      }
+    }
+
     function applyKitePersonalization() {
       var raw = localStorage.getItem(STORAGE_KEY);
       var localData = {};
@@ -1815,15 +1859,7 @@ function disableAnimation() {
       setText(".banner-subtitle", data.heroSubtitle);
       setAvatar(data.avatarUrl);
 
-      var layer = ensureLayer();
-      var backgroundUrl = rotatingUrl(data.backgroundUrl);
-      if (backgroundUrl) {
-        layer.style.backgroundImage = "url('" + String(backgroundUrl).replace(/'/g, "%27") + "')";
-        document.documentElement.classList.add("kite-has-personal-bg");
-      } else {
-        layer.style.backgroundImage = "";
-        document.documentElement.classList.remove("kite-has-personal-bg");
-      }
+      setWallpaper(data.backgroundUrl);
 
       if (data.glassStrength) {
         document.documentElement.style.setProperty("--kite-glass-strength", data.glassStrength);

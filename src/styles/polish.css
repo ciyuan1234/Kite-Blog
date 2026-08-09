@@ -50,6 +50,15 @@ body {
 	filter: saturate(1.06);
 }
 
+#banner-images-container.kite-custom-wallpaper {
+	background-position: center;
+	background-size: cover;
+}
+
+#banner-images-container.kite-custom-wallpaper :where(.slide-item, .banner-image-slot-mobile, .banner-image-slot-desktop) {
+	opacity: 0;
+}
+
 .kite-has-personal-bg #kite-personal-bg {
 	opacity: var(--kite-background-opacity);
 }
