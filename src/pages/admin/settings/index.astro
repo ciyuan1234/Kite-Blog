@@ -3,7 +3,7 @@ import { Icon } from "astro-icon/components";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
 
 const title = "站点设置";
-const description = "管理 KiteBlog 的头像、背景、首页文案和个人链接。";
+const description = "管理 KiteBlog 的头像、背景和首页文案";
 ---
 
 <MainGridLayout title={title} description={description}>
@@ -31,44 +31,20 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 				<section class="form-section">
 					<h2>基础信息</h2>
 					<div class="field-grid">
-						<label>
-							<span>博客名称</span>
-							<input data-field="siteTitle" maxlength="80" autocomplete="off" />
-						</label>
-						<label>
-							<span>博客副标题</span>
-							<input data-field="siteSubtitle" maxlength="180" autocomplete="off" />
-						</label>
-						<label>
-							<span>显示名称</span>
-							<input data-field="profileName" maxlength="80" autocomplete="off" />
-						</label>
-						<label>
-							<span>GitHub 链接</span>
-							<input data-field="githubUrl" placeholder="https://github.com/ciyuan1234" />
-						</label>
-						<label>
-							<span>QQ 链接</span>
-							<input data-field="qqUrl" placeholder="tencent://message/?uin=你的QQ号" />
-						</label>
-						<label>
-							<span>头像 URL</span>
-							<input data-field="avatarUrl" placeholder="https://example.com/avatar.jpg" />
-						</label>
-						<label class="wide">
-							<span>个人简介</span>
-							<textarea data-field="profileBio" rows="3" maxlength="240"></textarea>
-						</label>
+						<label><span>博客名称</span><input data-field="siteTitle" maxlength="80" autocomplete="off" /></label>
+						<label><span>博客副标题</span><input data-field="siteSubtitle" maxlength="180" autocomplete="off" /></label>
+						<label><span>显示名称</span><input data-field="profileName" maxlength="80" autocomplete="off" /></label>
+						<label><span>GitHub 链接</span><input data-field="githubUrl" placeholder="https://github.com/ciyuan1234" /></label>
+						<label><span>QQ 链接</span><input data-field="qqUrl" placeholder="tencent://message/?uin=你的QQ号" /></label>
+						<label><span>头像 URL</span><input data-field="avatarUrl" placeholder="https://example.com/avatar.jpg" /></label>
+						<label class="wide"><span>个人简介</span><textarea data-field="profileBio" rows="3" maxlength="240"></textarea></label>
 					</div>
 				</section>
 
 				<section class="form-section">
 					<h2>首页与背景</h2>
 					<div class="field-grid">
-						<label>
-							<span>首页标题</span>
-							<input data-field="heroTitle" maxlength="100" />
-						</label>
+						<label><span>首页标题</span><input data-field="heroTitle" maxlength="100" /></label>
 						<label>
 							<span>壁纸模式</span>
 							<select data-field="wallpaperMode">
@@ -78,39 +54,17 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 								<option value="none">关闭</option>
 							</select>
 						</label>
-						<label class="wide">
-							<span>首页副标题</span>
-							<textarea data-field="heroSubtitles" rows="4" placeholder="每行一句"></textarea>
-						</label>
-						<label class="wide">
-							<span>桌面背景 URL</span>
-							<textarea data-field="desktopBackgroundUrl" rows="4" placeholder="每行一个图片 URL 或本地路径"></textarea>
-						</label>
-						<label class="wide">
-							<span>手机背景 URL</span>
-							<textarea data-field="mobileBackgroundUrl" rows="4" placeholder="每行一个图片 URL 或本地路径"></textarea>
-						</label>
-						<label>
-							<span>遮罩暗度</span>
-							<input data-field="dimOpacity" type="number" min="0" max="0.85" step="0.05" />
-						</label>
-						<label>
-							<span>播放器地址</span>
-							<input data-field="playerUrl" placeholder="https://example.com/video.mp4" />
-						</label>
-						<label class="check-row">
-							<input data-field="carouselEnable" type="checkbox" />
-							<span>启用背景轮播</span>
-						</label>
-						<label class="check-row">
-							<input data-field="playerEnable" type="checkbox" />
-							<span>启用背景播放器</span>
-						</label>
+						<label class="wide"><span>首页副标题</span><textarea data-field="heroSubtitles" rows="4" placeholder="每行一条"></textarea></label>
+						<label class="wide"><span>统一背景 URL</span><textarea data-field="backgroundUrl" rows="4" placeholder="每行一个图片 URL 或本地路径"></textarea></label>
+						<label><span>遮罩暗度</span><input data-field="dimOpacity" type="number" min="0" max="0.85" step="0.05" /></label>
+						<label><span>播放器地址</span><input data-field="playerUrl" placeholder="https://example.com/video.mp4" /></label>
+						<label class="check-row"><input data-field="carouselEnable" type="checkbox" /><span>启用背景轮播</span></label>
+						<label class="check-row"><input data-field="playerEnable" type="checkbox" /><span>启用背景播放器</span></label>
 					</div>
 				</section>
 
 				<footer class="settings-footer">
-					<p data-save-state>保存后会提交到 GitHub，等待 Cloudflare 自动部署后全站生效。</p>
+					<p data-save-state>保存后会提交到 GitHub，Cloudflare 部署完成后全站生效。</p>
 					<button type="submit" class="admin-button primary">
 						<Icon is:inline name="material-symbols:cloud-upload-outline-rounded" />
 						保存到 GitHub
@@ -131,7 +85,7 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 					<img data-background-preview alt="背景预览" />
 					<span data-background-state>背景预览</span>
 				</div>
-				<p class="preview-note">这里是后台预览；访客页面会在 Cloudflare 部署完成后更新。</p>
+				<p class="preview-note">这里是后台预览；访客页面会在 Cloudflare 部署后更新。</p>
 			</aside>
 		</div>
 
@@ -166,7 +120,7 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 			const response = await fetch(url, { ...options, cache: "no-store" });
 			const payload = await response.json().catch(() => ({}));
 			if (!response.ok || payload.ok === false) {
-				throw new Error(payload.error || `请求失败：${response.status}`);
+				throw new Error(payload.error || `请求失败: ${response.status}`);
 			}
 			return payload;
 		}
@@ -185,7 +139,7 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 			const el = field(name);
 			if (!el) return "";
 			if (el.type === "checkbox") return el.checked;
-			if (["desktopBackgroundUrl", "mobileBackgroundUrl", "heroSubtitles"].includes(name)) {
+			if (["backgroundUrl", "heroSubtitles"].includes(name)) {
 				return el.value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 			}
 			return el.value.trim();
@@ -198,7 +152,7 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 
 		function updatePreview() {
 			const avatar = readField("avatarUrl");
-			const bg = firstImage(readField("desktopBackgroundUrl")) || firstImage(readField("mobileBackgroundUrl"));
+			const bg = firstImage(readField("backgroundUrl"));
 			if (avatarPreview) avatarPreview.src = avatar || "/favicon/firefly-32.png";
 			if (backgroundPreview) backgroundPreview.src = bg || "";
 			if (backgroundState) backgroundState.textContent = bg ? "背景预览" : "未设置背景";
@@ -216,8 +170,7 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 				"githubUrl",
 				"qqUrl",
 				"wallpaperMode",
-				"desktopBackgroundUrl",
-				"mobileBackgroundUrl",
+				"backgroundUrl",
 				"heroTitle",
 				"heroSubtitles",
 				"playerUrl",
@@ -238,8 +191,7 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 				githubUrl: readField("githubUrl"),
 				qqUrl: readField("qqUrl"),
 				wallpaperMode: readField("wallpaperMode"),
-				desktopBackgroundUrl: readField("desktopBackgroundUrl"),
-				mobileBackgroundUrl: readField("mobileBackgroundUrl"),
+				backgroundUrl: readField("backgroundUrl"),
 				heroTitle: readField("heroTitle"),
 				heroSubtitles: readField("heroSubtitles"),
 				playerUrl: readField("playerUrl"),
@@ -251,11 +203,10 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 
 		async function initSettings() {
 			try {
-				localStorage.removeItem("kiteblog:studio");
 				const session = await apiRequest("/api/admin/session");
 				if (!session.authenticated) {
 					if (stateEl) stateEl.innerHTML = '<a href="/api/auth/github/start">使用 GitHub 登录</a>';
-					if (emptyPanel) emptyPanel.innerHTML = "<p>需要登录后管理站点设置。</p>";
+					if (emptyPanel) emptyPanel.innerHTML = "<p>需要先登录才能管理设置。</p>";
 					return;
 				}
 				if (stateEl) stateEl.textContent = `已登录：@${session.user.login}`;
@@ -269,7 +220,7 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 		}
 
 		formWrap?.addEventListener("input", updatePreview);
-		avatarPreview?.addEventListener("error", () => setState("头像图片无法加载，请检查 URL 是否公开可访问。", true));
+		avatarPreview?.addEventListener("error", () => setState("头像无法加载，请检查 URL 是否可访问。", true));
 		backgroundPreview?.addEventListener("error", () => {
 			if (backgroundState) backgroundState.textContent = "背景图片无法加载";
 		});
@@ -284,8 +235,7 @@ const description = "管理 KiteBlog 的头像、背景、首页文案和个人�
 					headers: { "Content-Type": "application/json" },
 					body: JSON.stringify(collect()),
 				});
-				localStorage.removeItem("kiteblog:studio");
-				setState("已提交到 GitHub。Cloudflare 自动部署完成后，电脑和手机都会更新。");
+				setState("已提交到 GitHub，Cloudflare 部署后电脑和手机都会同步。", "success");
 			} catch (error) {
 				setState(error.message, true);
 			} finally {

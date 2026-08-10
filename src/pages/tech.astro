@@ -1,0 +1,23 @@
+---
+import { getEntry, render } from "astro:content";
+import Markdown from "@components/common/Markdown.astro";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+const techPost = await getEntry("spec", "tech");
+
+if (!techPost) {
+	throw new Error("Tech page content not found");
+}
+
+const { Content } = await render(techPost);
+---
+
+<MainGridLayout title="技术文档" description="KiteBlog 技术文档">
+	<div class="flex w-full rounded-(--radius-large) overflow-hidden relative min-h-32">
+		<div class="card-base z-10 px-9 py-6 relative w-full">
+			<Markdown class="mt-2">
+				<Content />
+			</Markdown>
+		</div>
+	</div>
+</MainGridLayout>

@@ -1,0 +1,175 @@
+---
+import { Icon } from "astro-icon/components";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+const title = "导入文章";
+const description = "从本地 Markdown 文件导入文章";
+---
+
+<MainGridLayout title={title} description={description}>
+	<section class="import-shell">
+		<header class="import-header">
+			<div>
+				<p class="eyebrow">Import</p>
+				<h1>导入 Markdown</h1>
+				<p data-session-state>正在检查登录状态...</p>
+			</div>
+			<div class="import-actions">
+				<a href="/admin/posts/" class="import-button">
+					<Icon is:inline name="material-symbols:arrow-back-rounded" />
+					文章列表
+				</a>
+				<a href="/admin/posts/edit/" class="import-button primary">
+					<Icon is:inline name="material-symbols:edit-outline-rounded" />
+					继续写作
+				</a>
+			</div>
+		</header>
+
+		<div class="import-panel">
+			<div class="dropzone" data-dropzone>
+				<input type="file" accept=".md,.mdx,.markdown,text/markdown" data-file-input hidden />
+				<Icon is:inline name="material-symbols:upload-file-rounded" class="drop-icon" />
+				<strong>拖拽 md 文件到这里</strong>
+				<p>导入后会自动跳转到文章编辑页，继续修改并保存到 GitHub。</p>
+				<button type="button" class="import-button primary" data-pick-file>
+					<Icon is:inline name="material-symbols:file-open-rounded" />
+					选择文件
+				</button>
+			</div>
+			<p class="status" data-status>等待导入。</p>
+		</div>
+	</section>
+
+	<script is:inline>
+		const statusEl = document.querySelector("[data-status]");
+		const sessionEl = document.querySelector("[data-session-state]");
+		const dropzone = document.querySelector("[data-dropzone]");
+		const fileInput = document.querySelector("[data-file-input]");
+		const pickButton = document.querySelector("[data-pick-file]");
+
+		function setStatus(message, state = "info") {
+			if (!statusEl) return;
+			statusEl.textContent = message;
+			statusEl.dataset.state = state;
+		}
+
+		async function apiRequest(url, options = {}) {
+			const response = await fetch(url, { ...options, cache: "no-store" });
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || payload.ok === false) {
+				throw new Error(payload.error || `请求失败: ${response.status}`);
+			}
+			return payload;
+		}
+
+		function parseFrontmatter(markdown) {
+			const match = String(markdown || "").match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+			const meta = match ? match[1] : "";
+			const body = match ? match[2] : String(markdown || "");
+			const read = (key) => {
+				const line = meta.match(new RegExp(`^${key}:\\s*(.*)$`, "m"));
+				return line ? line[1].trim().replace(/^["']|["']$/g, "") : "";
+			};
+			const tagsMatch = meta.match(/^tags:\s*\[([\s\S]*?)\]$/m);
+			const tags = tagsMatch
+				? tagsMatch[1].split(",").map((tag) => tag.trim().replace(/^["']|["']$/g, "")).filter(Boolean)
+				: [];
+			return {
+				title: read("title"),
+				slug: read("slug"),
+				published: read("published"),
+				category: read("category"),
+				tags,
+				description: read("description"),
+				image: read("image"),
+				body: body.trim(),
+			};
+		}
+
+		async function importFile(file) {
+			const markdown = await file.text();
+			const parsed = parseFrontmatter(markdown);
+			const payload = {
+				title: parsed.title || file.name.replace(/\.(md|mdx|markdown)$/i, ""),
+				slug: parsed.slug || file.name.replace(/\.(md|mdx|markdown)$/i, ""),
+				published: parsed.published || new Date().toISOString().slice(0, 10),
+				category: parsed.category || "随笔",
+				tags: parsed.tags || [],
+				description: parsed.description || "",
+				image: parsed.image || "",
+				body: parsed.body || "",
+			};
+			setStatus("已读取文件，正在打开编辑页...", "success");
+			sessionStorage.setItem("kiteblog:import-post", JSON.stringify(payload));
+			location.href = "/admin/posts/edit/";
+		}
+
+		async function checkSession() {
+			const payload = await apiRequest("/api/admin/session");
+			if (!payload.authenticated) {
+				if (sessionEl) sessionEl.innerHTML = '<a href="/api/auth/github/start">使用 GitHub 登录</a>';
+				return false;
+			}
+			if (sessionEl) sessionEl.textContent = `已登录：@${payload.user.login}`;
+			return true;
+		}
+
+		pickButton?.addEventListener("click", () => fileInput?.click());
+		fileInput?.addEventListener("change", async (event) => {
+			const file = event.target.files?.[0];
+			if (!file) return;
+			await importFile(file);
+			fileInput.value = "";
+		});
+		dropzone?.addEventListener("dragover", (event) => {
+			event.preventDefault();
+			dropzone.classList.add("dragover");
+		});
+		dropzone?.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
+		dropzone?.addEventListener("drop", async (event) => {
+			event.preventDefault();
+			dropzone.classList.remove("dragover");
+			const file = event.dataTransfer?.files?.[0];
+			if (!file) return;
+			await importFile(file);
+		});
+
+		checkSession().catch((error) => setStatus(error.message, "error"));
+	</script>
+</MainGridLayout>
+
+<style>
+	.import-shell { display: grid; gap: 1rem; }
+	.import-header, .import-panel {
+		border: 1px solid var(--line-divider);
+		border-radius: 12px;
+		background: color-mix(in oklch, var(--card-bg) 82%, transparent);
+		box-shadow: var(--surface-shadow);
+		backdrop-filter: saturate(1.14) blur(var(--kite-glass-strength, 16px));
+	}
+	.import-header { display: flex; justify-content: space-between; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); }
+	.eyebrow { margin: 0 0 .45rem; color: var(--primary); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+	h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3.1rem); line-height: 1.05; letter-spacing: 0; }
+	.import-header p { margin: .5rem 0 0; color: var(--content-meta); line-height: 1.7; }
+	.import-actions { display: flex; flex-wrap: wrap; gap: .65rem; }
+	.import-button {
+		display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.45rem;
+		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider)); border-radius: 8px;
+		padding: .6rem .8rem; color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, transparent);
+		font-weight: 800; text-decoration: none; cursor: pointer;
+	}
+	.import-button.primary { color: white; background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22)); }
+	.import-panel { padding: 1rem; }
+	.dropzone {
+		display: grid; place-items: center; gap: .8rem; text-align: center; min-height: 20rem;
+		padding: 1rem; border: 1px dashed var(--line-divider); border-radius: 12px;
+		background: color-mix(in oklch, var(--card-bg) 64%, transparent);
+	}
+	.dropzone.dragover { border-color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, var(--card-bg)); }
+	.drop-icon { font-size: 2rem; color: var(--primary); }
+	.status { margin: .9rem 0 0; color: var(--content-meta); font-weight: 800; }
+	.status[data-state="success"] { color: oklch(0.55 0.14 155); }
+	.status[data-state="error"] { color: oklch(0.56 0.18 25); }
+	@media (max-width: 760px) { .import-header { flex-direction: column; } .import-button { width: 100%; } }
+</style>

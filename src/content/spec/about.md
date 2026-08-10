@@ -1,20 +1,35 @@
 # 关于 KiteBlog
 
-你好，这里是 **KiteBlog**。
+KiteBlog 是 `ciyuan1234` 的个人博客主页，也是这个站点的主入口。
+这里会持续记录：
 
-这个网站用于记录技术实践、项目构建、生活想法和长期学习笔记。站点使用
-**Astro** 构建，部署目标是 GitHub Pages 和自定义域名
-`kite1024.xyz`。
+- 技术实践
+- 项目过程
+- 博客搭建和部署经验
+- 个人想法与长期笔记
+- 站点配置和维护说明
 
-## 站点说明
+## 这个站点是做什么的
 
-- GitHub 主页：[ciyuan1234](https://github.com/ciyuan1234)
-- 博客仓库：[ciyuan1234/Kite-Blog](https://github.com/ciyuan1234/Kite-Blog)
-- 博客域名：[kite1024.xyz](https://kite1024.xyz)
+它不是演示页，也不是静态展示页，而是一个真正可长期维护的个人博客。
+你可以在这里写文章、改背景、改头像、改首页文案、管理分类和友链。
+文章和配置都会同步到 GitHub 仓库，再由 Cloudflare 部署到线上。
 
-## 开源致谢
+## 当前使用方式
 
-本站基于开源主题 [Firefly](https://github.com/CuteLeaf/Firefly) 调整，
-Firefly 基于 [Fuwari](https://github.com/saicaca/fuwari) 二次开发。下面是当前个人博客仓库：
+- GitHub 主页：<https://github.com/ciyuan1234>
+- 博客仓库：<https://github.com/ciyuan1234/Kite-Blog>
+- 自定义域名：<https://kite1024.xyz>
 
-::github{repo="ciyuan1234/Kite-Blog"}
+## 你需要记住的开发方式
+
+- 文章存放在 `src/content/posts`
+- 站点说明放在 `src/content/spec`
+- 首页文案、头像、背景、链接类配置都可以在后台改
+- 后台写完后先提交 GitHub，再等 Cloudflare 自动重新部署
+- 如果后台改了内容，前台没变，通常是部署还没完成，不是数据丢了
+
+## 项目来源
+
+本站基于开源项目 Firefly 调整而来，并继续围绕个人博客、后台写作和站点定制做二次开发。
+后续新增的页面和文档，都会优先以“能直接维护、能直接回看”为目标。

@@ -58,8 +58,7 @@ type SiteSettingsInput = {
 	qqUrl?: string;
 	links?: AdminLinkInput[];
 	wallpaperMode?: "banner" | "fullscreen" | "overlay" | "none";
-	desktopBackgroundUrl?: string[] | string;
-	mobileBackgroundUrl?: string[] | string;
+	backgroundUrl?: string[] | string;
 	heroTitle?: string;
 	heroSubtitles?: string[] | string;
 	playerUrl?: string;
@@ -553,11 +552,7 @@ function parseFrontmatter(markdown: string) {
 }
 
 function normalizeSiteSettings(input: SiteSettingsInput) {
-	const desktopBackgroundUrl = normalizeList(input.desktopBackgroundUrl, 10);
-	const mobileBackgroundUrl = normalizeList(
-		input.mobileBackgroundUrl || input.desktopBackgroundUrl,
-		10,
-	);
+	const backgroundUrl = normalizeList(input.backgroundUrl, 10);
 	const playerUrl = cleanText(input.playerUrl, "", 2048);
 	const links = normalizeAdminLinks(
 		(input as SiteSettingsInput & { links?: unknown }).links,
@@ -616,10 +611,7 @@ function normalizeSiteSettings(input: SiteSettingsInput) {
 		)
 			? input.wallpaperMode
 			: "banner",
-		desktopBackgroundUrl,
-		mobileBackgroundUrl: mobileBackgroundUrl.length
-			? mobileBackgroundUrl
-			: desktopBackgroundUrl,
+		backgroundUrl,
 		heroTitle: cleanText(input.heroTitle, "KiteBlog", 100),
 		heroSubtitles: normalizeList(input.heroSubtitles, 8),
 		playerUrl,
@@ -656,8 +648,7 @@ function parseSiteSettings(
 			/\bmode:\s*"(banner|fullscreen|overlay|none)"/,
 			"banner",
 		) as SiteSettingsInput["wallpaperMode"],
-		desktopBackgroundUrl: extractConfigValue(wallpaperSource, "desktop"),
-		mobileBackgroundUrl: extractConfigValue(wallpaperSource, "mobile"),
+		backgroundUrl: extractConfigValue(wallpaperSource, "desktop"),
 		heroTitle: firstStringMatch(wallpaperSource, /\btitle:\s*"([^"]*)"/),
 		heroSubtitles: extractConfigValue(wallpaperSource, "subtitle"),
 		playerUrl: firstStringMatch(wallpaperSource, /\bplayerUrl:\s*"([^"]*)"/),
@@ -698,12 +689,9 @@ ${tsLinks(settings.links)}
 function buildWallpaperConfig(
 	settings: ReturnType<typeof normalizeSiteSettings>,
 ) {
-	const desktop = settings.desktopBackgroundUrl.length
-		? settings.desktopBackgroundUrl
+	const backgroundUrl = settings.backgroundUrl.length
+		? settings.backgroundUrl
 		: ["assets/images/DesktopWallpaper/d1.avif"];
-	const mobile = settings.mobileBackgroundUrl.length
-		? settings.mobileBackgroundUrl
-		: desktop;
 	const subtitles = settings.heroSubtitles.length
 		? settings.heroSubtitles
 		: [settings.siteSubtitle];
@@ -713,8 +701,8 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 \tmode: ${tsString(settings.wallpaperMode)} as BackgroundWallpaperConfig["mode"],
 \tplayerEnable: ${settings.playerEnable},
 \tsrc: {
-\t\tdesktop: ${tsArray(desktop)},
-\t\tmobile: ${tsArray(mobile)},
+\t\tdesktop: ${tsArray(backgroundUrl)},
+\t\tmobile: ${tsArray(backgroundUrl)},
 \t\tplayerUrl: ${tsString(settings.playerUrl)},
 \t},
 \tcommon: {
