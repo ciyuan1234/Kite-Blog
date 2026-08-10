@@ -5,10 +5,10 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	playerEnable: false,
 	src: {
 		desktop: [
-			"assets/images/DesktopWallpaper/d1.avif",
+			"https://c.53326.com/d/file/lan20221010/yeprusvetkx.jpg",
 		],
 		mobile: [
-			"assets/images/DesktopWallpaper/d1.avif",
+			"https://c.53326.com/d/file/lan20221010/yeprusvetkx.jpg",
 		],
 		playerUrl: "",
 	},
