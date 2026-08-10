@@ -1,5 +1,5 @@
 ---
-title: "react"
+title: "React"
 published: 2026-08-10
 description: "react基础学习"
 tags: ["react"]
