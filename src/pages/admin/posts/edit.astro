@@ -37,7 +37,7 @@ const description = "KiteBlog 文章编辑器";
 		<div class="edit-grid">
 			<aside class="import-panel">
 				<div class="import-dropzone" data-dropzone>
-					<input type="file" accept=".md,.mdx,.markdown,text/markdown" data-file-input hidden />
+					<input type="file" accept=".md,.mdx,.markdown,text/markdown,image/png,image/jpeg,image/webp,image/gif,image/avif" data-file-input multiple hidden />
 					<Icon is:inline name="material-symbols:upload-file-rounded" class="drop-icon" />
 					<strong>拖拽 md 文件到这里</strong>
 					<p>或点击选择文件，自动填充标题、Slug、分类、标签、摘要和正文。</p>
@@ -78,6 +78,17 @@ const description = "KiteBlog 文章编辑器";
 					<label>
 						<span>封面 URL</span>
 						<input name="image" placeholder="https://example.com/cover.jpg" />
+						<div class="asset-actions">
+							<input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" data-image-input hidden />
+							<button type="button" class="edit-button" data-upload-cover>
+								<Icon is:inline name="material-symbols:add-photo-alternate-outline-rounded" />
+								上传封面
+							</button>
+							<button type="button" class="edit-button" data-upload-inline>
+								<Icon is:inline name="material-symbols:add-photo-alternate-outline-rounded" />
+								插入图片
+							</button>
+						</div>
 					</label>
 					<label class="span-2">
 						<span>摘要</span>
@@ -108,9 +119,13 @@ const description = "KiteBlog 文章编辑器";
 		const params = new URLSearchParams(location.search);
 		const editingSlug = params.get("slug") || "";
 		const fileInput = document.querySelector("[data-file-input]");
+		const imageInput = document.querySelector("[data-image-input]");
 		const importButton = document.querySelector("[data-import]");
+		const uploadCoverButton = document.querySelector("[data-upload-cover]");
+		const uploadInlineButton = document.querySelector("[data-upload-inline]");
 		const dropzone = document.querySelector("[data-dropzone]");
 		const pendingImport = sessionStorage.getItem("kiteblog:import-post");
+		let imageTarget = "inline";
 
 		function escapeHtml(value) {
 			return String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -130,7 +145,7 @@ const description = "KiteBlog 文章编辑器";
 
 		async function apiRequest(url, options = {}) {
 			const headers = new Headers(options.headers || {});
-			if (options.body) headers.set("Content-Type", "application/json");
+			if (options.body && !(options.body instanceof FormData)) headers.set("Content-Type", "application/json");
 			const response = await fetch(url, { ...options, headers, cache: "no-store" });
 			const payload = await response.json().catch(() => ({}));
 			if (!response.ok || payload.ok === false) {
@@ -237,6 +252,103 @@ const description = "KiteBlog 文章编辑器";
 			setStatus("文章已载入。", "success");
 		}
 
+		function fileKey(path) {
+			return String(path || "").replace(/\\/g, "/").replace(/^\.?\//, "").toLowerCase();
+		}
+
+		function isMarkdownFile(file) {
+			return /\.(md|mdx|markdown)$/i.test(file.name || "");
+		}
+
+		function isImageFile(file) {
+			return /^image\/(png|jpeg|webp|gif|avif)$/.test(file.type) || /\.(png|jpe?g|webp|gif|avif)$/i.test(file.name || "");
+		}
+
+		function publicImagePath(value) {
+			const raw = String(value || "").trim();
+			if (!raw || /^(https?:|data:|\/)/i.test(raw) || raw.startsWith("#")) return null;
+			return fileKey(decodeURIComponent(raw.split(/[?#]/)[0]));
+		}
+
+		function markdownImagePaths(markdown) {
+			const paths = new Set();
+			const imagePattern = /!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+			for (const match of String(markdown || "").matchAll(imagePattern)) {
+				const path = publicImagePath(match[1]);
+				if (path) paths.add(path);
+			}
+			const htmlPattern = /<img\b[^>]*\bsrc=["']([^"']+)["'][^>]*>/gi;
+			for (const match of String(markdown || "").matchAll(htmlPattern)) {
+				const path = publicImagePath(match[1]);
+				if (path) paths.add(path);
+			}
+			return Array.from(paths);
+		}
+
+		function buildFileMap(files) {
+			const map = new Map();
+			for (const file of files) {
+				if (!isImageFile(file)) continue;
+				const relative = file.webkitRelativePath || file.name;
+				const keys = [relative, file.name].map(fileKey);
+				const segments = fileKey(relative).split("/");
+				for (let index = 0; index < segments.length; index++) keys.push(segments.slice(index).join("/"));
+				for (const key of keys) if (key && !map.has(key)) map.set(key, file);
+			}
+			return map;
+		}
+
+		function resolveImageFile(path, fileMap) {
+			const key = fileKey(path).replace(/^(\.\.\/)+/, "");
+			if (fileMap.has(key)) return fileMap.get(key);
+			const fileName = key.split("/").pop();
+			return fileName ? fileMap.get(fileName) : null;
+		}
+
+		async function uploadAsset(file, slug, name = "") {
+			if (!isImageFile(file)) throw new Error("只支持 png、jpg、jpeg、webp、gif、avif 图片。");
+			const body = new FormData();
+			body.set("file", file);
+			body.set("slug", slug || form.elements.slug.value || "draft");
+			if (name) body.set("name", name);
+			const payload = await apiRequest("/api/admin/assets", { method: "POST", body });
+			return payload.url;
+		}
+
+		function replaceMarkdownPath(markdown, from, to) {
+			const escaped = from.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+			return String(markdown || "")
+				.replace(new RegExp(`(\\]\\()${escaped}((?:\\s+"[^"]*")?\\))`, "g"), `$1${to}$2`)
+				.replace(new RegExp(`(\\bsrc=["'])${escaped}(["'])`, "gi"), `$1${to}$2`);
+		}
+
+		async function uploadLocalImages(markdown, files, slug) {
+			const fileMap = buildFileMap(files);
+			let next = markdown;
+			const missing = [];
+			for (const path of markdownImagePaths(markdown)) {
+				const file = resolveImageFile(path, fileMap);
+				if (!file) {
+					missing.push(path);
+					continue;
+				}
+				setStatus(`正在上传图片：${file.name}`, "info");
+				const url = await uploadAsset(file, slug, file.name);
+				next = replaceMarkdownPath(next, path, url);
+			}
+			if (missing.length) setStatus(`这些本地图片没有找到：${missing.join(", ")}`, "error");
+			return next;
+		}
+
+		function insertAtCursor(textarea, text) {
+			const start = textarea.selectionStart ?? textarea.value.length;
+			const end = textarea.selectionEnd ?? textarea.value.length;
+			textarea.value = `${textarea.value.slice(0, start)}${text}${textarea.value.slice(end)}`;
+			const next = start + text.length;
+			textarea.focus();
+			textarea.setSelectionRange(next, next);
+		}
+
 		function importMarkdown(markdown, fileName = "") {
 			const parsed = parseFrontmatter(markdown);
 			const base = fileName.replace(/\.(md|mdx|markdown)$/i, "") || "imported-post";
@@ -253,9 +365,22 @@ const description = "KiteBlog 文章编辑器";
 			setStatus("已导入 Markdown 文件。", "success");
 		}
 
-		async function readFile(file) {
-			const text = await file.text();
-			importMarkdown(text, file.name);
+		async function readFiles(files) {
+			const list = Array.from(files || []);
+			const markdownFile = list.find(isMarkdownFile);
+			if (!markdownFile) {
+				const imageFile = list.find(isImageFile);
+				if (!imageFile) return;
+				const url = await uploadAsset(imageFile, form.elements.slug.value || "draft", imageFile.name);
+				insertAtCursor(form.elements.body, `\n![${imageFile.name}](${url})\n`);
+				setStatus(`图片已上传：${url}`, "success");
+				return;
+			}
+			let text = await markdownFile.text();
+			const parsed = parseFrontmatter(text);
+			const slug = parsed.slug || markdownFile.name.replace(/\.(md|mdx|markdown)$/i, "") || "imported-post";
+			text = await uploadLocalImages(text, list, slug);
+			importMarkdown(text, markdownFile.name);
 		}
 
 		function openFilePicker() {
@@ -264,9 +389,9 @@ const description = "KiteBlog 文章编辑器";
 
 		importButton?.addEventListener("click", openFilePicker);
 		fileInput?.addEventListener("change", async (event) => {
-			const file = event.target.files?.[0];
-			if (!file) return;
-			await readFile(file);
+			const files = event.target.files;
+			if (!files?.length) return;
+			await readFiles(files);
 			fileInput.value = "";
 		});
 		dropzone?.addEventListener("dragover", (event) => {
@@ -279,9 +404,49 @@ const description = "KiteBlog 文章编辑器";
 		dropzone?.addEventListener("drop", async (event) => {
 			event.preventDefault();
 			dropzone.classList.remove("dragover");
-			const file = event.dataTransfer?.files?.[0];
+			const files = event.dataTransfer?.files;
+			if (!files?.length) return;
+			await readFiles(files);
+		});
+
+		uploadCoverButton?.addEventListener("click", () => {
+			imageTarget = "cover";
+			imageInput?.click();
+		});
+		uploadInlineButton?.addEventListener("click", () => {
+			imageTarget = "inline";
+			imageInput?.click();
+		});
+		imageInput?.addEventListener("change", async (event) => {
+			const file = event.target.files?.[0];
 			if (!file) return;
-			await readFile(file);
+			try {
+				setStatus(`正在上传图片：${file.name}`, "info");
+				const url = await uploadAsset(file, form.elements.slug.value || "draft", file.name);
+				if (imageTarget === "cover") {
+					form.elements.image.value = url;
+				} else {
+					insertAtCursor(form.elements.body, `\n![${file.name}](${url})\n`);
+				}
+				setStatus(`图片已上传：${url}`, "success");
+			} catch (error) {
+				setStatus(error.message, "error");
+			} finally {
+				imageInput.value = "";
+			}
+		});
+		form.elements.body?.addEventListener("paste", async (event) => {
+			const file = Array.from(event.clipboardData?.files || []).find(isImageFile);
+			if (!file) return;
+			event.preventDefault();
+			try {
+				setStatus(`正在上传图片：${file.name || "pasted-image.png"}`, "info");
+				const url = await uploadAsset(file, form.elements.slug.value || "draft", file.name || "pasted-image.png");
+				insertAtCursor(form.elements.body, `\n![${file.name || "图片"}](${url})\n`);
+				setStatus(`图片已上传：${url}`, "success");
+			} catch (error) {
+				setStatus(error.message, "error");
+			}
 		});
 
 		async function savePost() {
@@ -368,6 +533,8 @@ const description = "KiteBlog 文章编辑器";
 	}
 	.edit-button.primary { color: white; background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22)); }
 	.edit-button.danger { color: oklch(0.56 0.18 25); }
+	.asset-actions { display: flex; flex-wrap: wrap; gap: .55rem; margin-top: .55rem; }
+	.asset-actions .edit-button { flex: 1; min-width: 8rem; }
 	.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 .85rem; }
 	.span-2 { grid-column: 1 / -1; }
 	label { display: grid; gap: .4rem; margin-bottom: .9rem; font-weight: 700; }

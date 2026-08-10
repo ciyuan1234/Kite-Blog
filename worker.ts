@@ -87,6 +87,7 @@ type FriendInput = {
 const SESSION_COOKIE = "kite_admin_session";
 const STATE_COOKIE = "kite_oauth_state";
 const POST_DIR = "src/content/posts";
+const UPLOAD_DIR = "public/uploads";
 const PROFILE_CONFIG_PATH = "src/config/profileConfig.ts";
 const WALLPAPER_CONFIG_PATH = "src/config/backgroundWallpaper.ts";
 const SITE_CONFIG_PATH = "src/config/siteConfig.ts";
@@ -173,6 +174,13 @@ function base64ToUtf8(value: string) {
 	return new TextDecoder().decode(bytes);
 }
 
+function arrayBufferToBase64(value: ArrayBuffer) {
+	const bytes = new Uint8Array(value);
+	let binary = "";
+	for (const byte of bytes) binary += String.fromCharCode(byte);
+	return btoa(binary);
+}
+
 function getCookie(request: Request, name: string) {
 	const cookie = request.headers.get("Cookie") || "";
 	const match = cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
@@ -240,6 +248,46 @@ function sanitizeSlug(value: string) {
 			.replace(/^-+|-+$/g, "")
 			.slice(0, 96) || "untitled"
 	);
+}
+
+function sanitizeFileName(value: string) {
+	const parts = String(value || "image")
+		.replace(/\\/g, "/")
+		.split("/");
+	const name = parts[parts.length - 1] || "image";
+	const dot = name.lastIndexOf(".");
+	const base = (dot >= 0 ? name.slice(0, dot) : name)
+		.toLowerCase()
+		.trim()
+		.replace(/[^a-z0-9\u4e00-\u9fa5-]+/g, "-")
+		.replace(/^-+|-+$/g, "")
+		.slice(0, 64);
+	const ext = (dot >= 0 ? name.slice(dot + 1) : "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]/g, "")
+		.slice(0, 8);
+	return `${base || "image"}${ext ? `.${ext}` : ""}`;
+}
+
+function isAllowedImage(fileName: string, type = "") {
+	const extension = fileName.split(".").pop()?.toLowerCase() || "";
+	return (
+		["png", "jpg", "jpeg", "webp", "gif", "avif"].includes(extension) ||
+		[
+			"image/png",
+			"image/jpeg",
+			"image/webp",
+			"image/gif",
+			"image/avif",
+		].includes(type)
+	);
+}
+
+function uploadPath(slug: string, fileName: string) {
+	const now = new Date();
+	const year = String(now.getUTCFullYear());
+	const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+	return `${UPLOAD_DIR}/${year}/${month}/${sanitizeSlug(slug)}/${sanitizeFileName(fileName)}`;
 }
 
 function postPath(slug: string) {
@@ -885,6 +933,29 @@ async function commitGitHubFile(
 	);
 }
 
+async function commitGitHubBase64File(
+	env: Env,
+	path: string,
+	content: string,
+	message: string,
+	sha?: string,
+) {
+	const { owner, repo, branch } = repoConfig(env);
+	return githubFetch(
+		env,
+		`/repos/${owner}/${repo}/contents/${encodeRepoPath(path)}`,
+		{
+			method: "PUT",
+			body: JSON.stringify({
+				message,
+				content,
+				branch,
+				...(sha ? { sha } : {}),
+			}),
+		},
+	);
+}
+
 async function deleteGitHubFile(
 	env: Env,
 	path: string,
@@ -1126,6 +1197,52 @@ async function handleAdminPosts(request: Request, env: Env, slug?: string) {
 	}
 
 	return json({ ok: false, error: "Method not allowed." }, { status: 405 });
+}
+
+async function handleAdminAssets(request: Request, env: Env) {
+	const session = await requireSession(request, env);
+	if (!session)
+		return json({ ok: false, error: "Unauthorized." }, { status: 401 });
+	if (request.method !== "POST")
+		return json({ ok: false, error: "Method not allowed." }, { status: 405 });
+
+	const form = await request.formData().catch(() => null);
+	const file = form?.get("file");
+	const slug = cleanText(form?.get("slug"), "draft", 96);
+	const requestedName = cleanText(form?.get("name"), "", 180);
+	if (!(file instanceof File)) {
+		return json({ ok: false, error: "没有收到图片文件。" }, { status: 400 });
+	}
+	if (!isAllowedImage(file.name, file.type)) {
+		return json(
+			{ ok: false, error: "只支持 png、jpg、jpeg、webp、gif、avif 图片。" },
+			{ status: 400 },
+		);
+	}
+	if (file.size > 5 * 1024 * 1024) {
+		return json(
+			{ ok: false, error: "单张图片不能超过 5MB。" },
+			{ status: 400 },
+		);
+	}
+
+	const safeName = sanitizeFileName(requestedName || file.name);
+	const path = uploadPath(slug, safeName);
+	const existing = await maybeGetGitHubFile(env, path);
+	await commitGitHubBase64File(
+		env,
+		path,
+		arrayBufferToBase64(await file.arrayBuffer()),
+		`asset: upload ${safeName}`,
+		existing?.sha,
+	);
+	return json({
+		ok: true,
+		path,
+		url: `/${path.replace(/^public\//, "")}`,
+		name: safeName,
+		size: file.size,
+	});
 }
 
 async function handleAdminSettings(request: Request, env: Env) {
@@ -1371,6 +1488,8 @@ async function handleApi(request: Request, env: Env) {
 			return await handleAdminLinks(request, env);
 		if (pathname === "/api/admin/friends")
 			return await handleAdminFriends(request, env);
+		if (pathname === "/api/admin/assets")
+			return await handleAdminAssets(request, env);
 		const postMatch = pathname.match(/^\/api\/admin\/posts\/([^/]+)$/);
 		if (postMatch)
 			return await handleAdminPosts(
