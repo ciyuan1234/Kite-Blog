@@ -2,7 +2,7 @@
 title: "DevPilot AI 项目Day 1：使用 C++ + Drogon 搭建后端基础环境"
 published: 2026-08-11
 description: ""
-tags: []
+tags: ["开发经验"]
 category: "项目开发"
 image: "https://w.wallhaven.cc/full/l8/wallhaven-l882yl.png"
 slug: "devpilot-ai-day-1-使用-c-drogon-搭建后端基础环境"
