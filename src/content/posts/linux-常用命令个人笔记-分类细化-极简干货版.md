@@ -1,5 +1,5 @@
 ---
-title: "Linux 常用命令个人笔记（分类细化·极简干货版）"
+title: "Linux 常用命令"
 published: 2026-08-12
 description: ""
 tags: ["linux"]
@@ -13,28 +13,6 @@ slug: "linux-常用命令个人笔记-分类细化-极简干货版"
 个人日常高频 Linux 命令汇总，分类精细、标题精准，无冗余话术，纯实操自用，方便快速查阅、复习。
 
 ## 目录
-
-- [一、前置基础：命令通用规则](https://www.doubao.cn)
-
-- [二、目录层级操作命令（路径导航\+目录管理）](https://www.doubao.cn)
-
-- [三、文件日常操作命令（增删改移）](https://www.doubao.cn)
-
-- [四、文件内容查看命令（日志/文本读取）](https://www.doubao.cn)
-
-- [五、文本编辑工具（Vim 极简操作）](https://www.doubao.cn)
-
-- [六、文件权限与归属管理命令](https://www.doubao.cn)
-
-- [七、文件检索与内容过滤命令](https://www.doubao.cn)
-
-- [八、文件压缩与解压命令](https://www.doubao.cn)
-
-- [九、系统资源与进程管理命令](https://www.doubao.cn)
-
-- [十、网络状态检测命令](https://www.doubao.cn)
-
----
 
 ## 一、前置基础：命令通用规则
 
