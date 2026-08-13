@@ -27,6 +27,10 @@ const description = "KiteBlog 文章编辑器";
 					<Icon is:inline name="material-symbols:category-outline-rounded" />
 					分类
 				</a>
+				<a href="/admin/tags/" class="edit-button">
+					<Icon is:inline name="material-symbols:label-outline-rounded" />
+					标签
+				</a>
 				<button type="button" data-save class="edit-button primary">
 					<Icon is:inline name="material-symbols:cloud-upload-outline-rounded" />
 					保存
@@ -34,80 +38,93 @@ const description = "KiteBlog 文章编辑器";
 			</div>
 		</header>
 
-		<div class="edit-grid">
-			<aside class="import-panel">
-				<div class="import-dropzone" data-dropzone>
-					<input type="file" accept=".md,.mdx,.markdown,text/markdown,image/png,image/jpeg,image/webp,image/gif,image/avif" data-file-input multiple hidden />
-					<Icon is:inline name="material-symbols:upload-file-rounded" class="drop-icon" />
-					<strong>拖拽 md 文件到这里</strong>
-					<p>或点击选择文件，自动填充标题、Slug、分类、标签、摘要和正文。</p>
-					<button type="button" class="edit-button" data-import>
-						<Icon is:inline name="material-symbols:file-open-rounded" />
-						选择文件
-					</button>
-				</div>
-				<div class="import-note">
-					<p>导入仅在浏览器读取文件，不会写入本地。</p>
-					<p>保存后会提交到 GitHub，Cloudflare 部署后前台同步更新。</p>
-				</div>
-			</aside>
+		<div class="import-strip" data-dropzone>
+			<input type="file" accept=".md,.mdx,.markdown,text/markdown,image/png,image/jpeg,image/webp,image/gif,image/avif" data-file-input multiple hidden />
+			<Icon is:inline name="material-symbols:upload-file-rounded" class="drop-icon" />
+			<strong>拖拽 md 文件到编辑器，或</strong>
+			<button type="button" class="edit-button" data-import>
+				<Icon is:inline name="material-symbols:file-open-rounded" />
+				选择文件
+			</button>
+			<p class="strip-note">导入自动填充字段；粘贴/拖入图片会上传并转成本地链接，随仓库永久保存。</p>
+		</div>
 
-			<form id="post-form" class="edit-panel">
-				<div class="field-grid">
-					<label>
-						<span>标题</span>
-						<input name="title" value="新的博客文章" required autocomplete="off" />
+		<form id="post-form" class="edit-panel">
+			<div class="field-grid">
+				<label>
+					<span>标题</span>
+					<input name="title" value="新的博客文章" required autocomplete="off" />
+				</label>
+				<label>
+					<span>Slug</span>
+					<input name="slug" value="new-post" required autocomplete="off" />
+				</label>
+				<label>
+					<span>发布日期</span>
+					<input name="published" type="date" />
+				</label>
+				<label>
+					<span>分类</span>
+					<input name="category" value="随笔" list="category-options" autocomplete="off" />
+					<datalist id="category-options"></datalist>
+				</label>
+				<label>
+					<span>标签</span>
+					<input name="tags" value="KiteBlog, 随笔" autocomplete="off" />
+				</label>
+				<label>
+					<span>封面 URL</span>
+					<input name="image" placeholder="https://example.com/cover.jpg" />
+					<div class="asset-actions">
+						<input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" data-image-input hidden />
+						<button type="button" class="edit-button" data-upload-cover>
+							<Icon is:inline name="material-symbols:add-photo-alternate-outline-rounded" />
+							上传封面
+						</button>
+						<button type="button" class="edit-button" data-upload-inline>
+							<Icon is:inline name="material-symbols:add-photo-alternate-outline-rounded" />
+							插入图片
+						</button>
+					</div>
+				</label>
+				<div class="span-2 edit-checks">
+					<label class="edit-check">
+						<input type="checkbox" name="draft" />
+						<span>草稿（正式环境前台不展示）</span>
 					</label>
-					<label>
-						<span>Slug</span>
-						<input name="slug" value="new-post" required autocomplete="off" />
-					</label>
-					<label>
-						<span>发布日期</span>
-						<input name="published" type="date" />
-					</label>
-					<label>
-						<span>分类</span>
-						<input name="category" value="随笔" list="category-options" autocomplete="off" />
-						<datalist id="category-options"></datalist>
-					</label>
-					<label>
-						<span>标签</span>
-						<input name="tags" value="KiteBlog, 随笔" autocomplete="off" />
-					</label>
-					<label>
-						<span>封面 URL</span>
-						<input name="image" placeholder="https://example.com/cover.jpg" />
-						<div class="asset-actions">
-							<input type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/avif" data-image-input hidden />
-							<button type="button" class="edit-button" data-upload-cover>
-								<Icon is:inline name="material-symbols:add-photo-alternate-outline-rounded" />
-								上传封面
-							</button>
-							<button type="button" class="edit-button" data-upload-inline>
-								<Icon is:inline name="material-symbols:add-photo-alternate-outline-rounded" />
-								插入图片
-							</button>
-						</div>
-					</label>
-					<label class="span-2">
-						<span>摘要</span>
-						<input name="description" value="这里是文章摘要。" autocomplete="off" />
-					</label>
-					<label class="span-2">
-						<span>Markdown 正文</span>
-						<textarea name="body" rows="26" required>从这里开始写正文。</textarea>
+					<label class="edit-check">
+						<input type="checkbox" name="pinned" />
+						<span>置顶（列表优先显示）</span>
 					</label>
 				</div>
-				<div class="edit-footer">
-					<p class="edit-status" data-status>等待操作。</p>
-					<div class="edit-actions">
-						<button type="button" data-save class="edit-button primary">保存</button>
-						<button type="button" data-delete class="edit-button danger">删除</button>
+				<label class="span-2">
+					<span>摘要</span>
+					<input name="description" value="这里是文章摘要。" autocomplete="off" />
+				</label>
+
+				<div class="span-2 kb-editor-head">
+					<span>Markdown 正文（支持 HTML 语法实时渲染）</span>
+				</div>
+				<div class="span-2 mode-toolbar">
+					<button type="button" data-mode="split" class="active">分屏</button>
+					<button type="button" data-mode="preview">仅预览</button>
+					<p class="mode-hint">分屏：左侧源码、右侧实时渲染，滚动与点击双向联动；支持 KaTeX、Callout、Wiki 链接、Mermaid、PlantUML。</p>
+				</div>
+				<div class="span-2 editor-area">
+					<div data-split-editor class="kb-split">
+						<textarea id="body" name="body" data-body-editor rows="26" required>从这里开始写正文。</textarea>
+						<div data-preview class="kb-preview custom-md" hidden></div>
 					</div>
 				</div>
-			</form>
-		</div>
+			</div>
+			<div class="edit-footer">
+				<p class="edit-status" data-status>等待操作。</p>
+				<div class="edit-actions">
+					<button type="button" data-save class="edit-button primary">保存</button>
+					<button type="button" data-delete class="edit-button danger">删除</button>
+				</div>
+			</div>
+		</form>
 	</section>
 
 	<script is:inline>
@@ -167,6 +184,8 @@ const description = "KiteBlog 文章编辑器";
 				tags: form.elements.tags.value.split(",").map((tag) => tag.trim()).filter(Boolean),
 				description: form.elements.description.value.trim(),
 				image: form.elements.image.value.trim(),
+				draft: form.elements.draft.checked === true,
+				pinned: form.elements.pinned.checked === true,
 				body: form.elements.body.value.trim(),
 			};
 		}
@@ -180,7 +199,10 @@ const description = "KiteBlog 文章编辑器";
 			form.elements.tags.value = (post.tags || []).join(", ");
 			form.elements.description.value = post.description || "";
 			form.elements.image.value = post.image || "";
+			form.elements.draft.checked = post.draft === true;
+			form.elements.pinned.checked = post.pinned === true;
 			form.elements.body.value = post.body || "";
+			window.kiteBridge?.flush?.();
 			if (titleEl) titleEl.textContent = `编辑：${post.title || post.slug || "未命名"}`;
 		}
 
@@ -196,6 +218,10 @@ const description = "KiteBlog 文章编辑器";
 			const tags = tagsMatch
 				? tagsMatch[1].split(",").map((tag) => tag.trim().replace(/^["']|["']$/g, "")).filter(Boolean)
 				: [];
+			const readBool = (key) => {
+				const line = meta.match(new RegExp(`^${key}:\\s*(true|false)\\b`, "m"));
+				return line ? line[1] === "true" : false;
+			};
 			return {
 				title: read("title"),
 				slug: read("slug"),
@@ -204,6 +230,8 @@ const description = "KiteBlog 文章编辑器";
 				tags,
 				description: read("description"),
 				image: read("image"),
+				draft: readBool("draft"),
+				pinned: readBool("pinned"),
 				body: body.trim(),
 			};
 		}
@@ -347,6 +375,7 @@ const description = "KiteBlog 文章编辑器";
 			const next = start + text.length;
 			textarea.focus();
 			textarea.setSelectionRange(next, next);
+			window.kiteBridge?.flush?.();
 		}
 
 		function importMarkdown(markdown, fileName = "") {
@@ -360,7 +389,10 @@ const description = "KiteBlog 文章编辑器";
 			form.elements.tags.value = (parsed.tags || []).join(", ");
 			form.elements.description.value = parsed.description || "";
 			form.elements.image.value = parsed.image || "";
+			form.elements.draft.checked = parsed.draft === true;
+			form.elements.pinned.checked = parsed.pinned === true;
 			form.elements.body.value = parsed.body || "";
+			window.kiteBridge?.flush?.();
 			if (titleEl) titleEl.textContent = `编辑：${parsed.title || base}`;
 			setStatus("已导入 Markdown 文件。", "success");
 		}
@@ -450,6 +482,7 @@ const description = "KiteBlog 文章编辑器";
 		});
 
 		async function savePost() {
+			window.kiteBridge?.flush?.();
 			const post = readForm();
 			if (!post.title || !post.slug || !post.body) {
 				setStatus("标题、Slug 和正文不能为空。", "error");
@@ -495,15 +528,60 @@ const description = "KiteBlog 文章编辑器";
 
 		document.querySelectorAll("[data-save]").forEach((button) => button.addEventListener("click", savePost));
 		document.querySelector("[data-delete]")?.addEventListener("click", deletePost);
-		checkSession().then((ok) => {
-			if (ok) loadPost().catch((error) => setStatus(escapeHtml(error.message), "error"));
+		checkSession()
+			.then((ok) => {
+				if (ok) loadPost().catch((error) => setStatus(escapeHtml(error.message), "error"));
+			})
+			.catch((error) => {
+				form.hidden = false;
+				setStatus(`会话检查失败（${error.message}），本地预览可编辑但无法保存。`, "error");
+			});
+	</script>
+
+	<script>
+		import { mountEditor } from "../../../utils/admin-editor";
+
+		declare global {
+			interface Window {
+				kiteBridge?: {
+					flush: () => void;
+					bodyText: () => string;
+				};
+			}
+		}
+
+function readSlug() {
+	return (document.getElementById("slug") as HTMLInputElement | null)?.value || "new-post";
+}
+
+		const editor = mountEditor({
+			textarea: document.getElementById("body") as HTMLTextAreaElement,
+			split: document.querySelector("[data-split-editor]") as HTMLElement,
+			preview: document.querySelector("[data-preview]") as HTMLElement,
+			slug: readSlug,
+		});
+		window.kiteBridge = {
+			flush: () => editor.sync(),
+			bodyText: () =>
+				(document.getElementById("body") as HTMLTextAreaElement | null)?.value || "",
+		};
+		document.querySelectorAll<HTMLButtonElement>("[data-mode]").forEach((button) => {
+			button.addEventListener("click", () => {
+				const next = button.dataset.mode;
+				if (next !== "split" && next !== "preview") return;
+				editor.sync();
+				document.querySelectorAll("[data-mode]").forEach((other) => {
+					other.classList.toggle("active", other === button);
+				});
+				editor.setMode(next);
+			});
 		});
 	</script>
 </MainGridLayout>
 
-<style>
+<style is:global>
 	.edit-shell { display: grid; gap: 1rem; }
-	.edit-header, .edit-panel, .import-panel {
+	.edit-header, .edit-panel {
 		border: 1px solid var(--line-divider);
 		border-radius: 12px;
 		background: color-mix(in oklch, var(--card-bg) 82%, transparent);
@@ -514,16 +592,50 @@ const description = "KiteBlog 文章编辑器";
 	.eyebrow { margin: 0 0 .45rem; color: var(--primary); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
 	h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3.1rem); line-height: 1.05; letter-spacing: 0; }
 	.edit-header p { margin: .5rem 0 0; color: var(--content-meta); line-height: 1.7; }
-	.edit-grid { display: grid; grid-template-columns: minmax(16rem, 19rem) minmax(0, 1fr); gap: 1rem; }
-	.import-panel, .edit-panel { padding: 1rem; }
-	.import-dropzone {
-		display: grid; gap: .75rem; place-items: center; text-align: center;
-		padding: 1.1rem; min-height: 17rem; border: 1px dashed var(--line-divider); border-radius: 10px;
+	.edit-panel { padding: 1rem; }
+	.import-strip {
+		display: flex; flex-wrap: wrap; gap: .8rem; align-items: center;
+		border: 1px dashed var(--line-divider); border-radius: 12px; padding: .9rem 1.1rem; margin-bottom: 1rem;
 		background: color-mix(in oklch, var(--card-bg) 60%, transparent);
 	}
-	.import-dropzone.dragover { border-color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, var(--card-bg)); }
-	.drop-icon { font-size: 2rem; color: var(--primary); }
-	.import-note { margin-top: .9rem; color: var(--content-meta); line-height: 1.6; }
+	.import-strip.dragover { border-color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, var(--card-bg)); }
+	.import-strip strong { white-space: nowrap; }
+	.drop-icon { color: var(--primary); }
+	.strip-note { margin: 0 0 0 auto; color: var(--content-meta); line-height: 1.6; font-size: .84rem; max-width: 33rem; }
+	.kb-editor-head { color: var(--content-meta); font-size: .84rem; }
+	.mode-toolbar { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
+	.mode-hint { margin: 0 0 0 auto; color: var(--content-meta); font-size: .8rem; line-height: 1.6; max-width: 30rem; }
+	.mode-toolbar button {
+		border: 1px solid var(--line-divider); border-radius: 999px; padding: .4rem .85rem;
+		color: var(--content-meta); background: color-mix(in oklch, var(--card-bg) 70%, transparent);
+		font: inherit; font-size: .85rem; font-weight: 800; cursor: pointer;
+	}
+	.mode-toolbar button.active {
+		color: white; border-color: transparent;
+		background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22));
+	}
+	.editor-area { min-width: 0; }
+	.editor-area [hidden] { display: none !important; }
+	.kb-split { display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; height: 30rem; }
+	.kb-split.kb-preview-only { grid-template-columns: minmax(0, 1fr); }
+	.kb-split .kb-textarea { height: 100%; resize: none; }
+	.kb-preview {
+		display: block; height: 100%; overflow: auto; padding: .85rem .95rem;
+		border: 1px solid var(--line-divider); border-radius: 8px;
+		background: color-mix(in oklch, var(--card-bg) 70%, transparent);
+	}
+	.kb-preview pre {
+		overflow: auto; margin: .6rem 0; padding: .85rem .95rem;
+		border: 1px solid var(--line-divider); border-radius: 10px;
+		background: color-mix(in oklch, var(--card-bg) 70%, transparent);
+		font-size: .85rem; line-height: 1.7;
+	}
+	.kb-preview pre code { background: none; padding: 0; color: inherit; }
+	.kb-preview .kb-block { border-radius: 8px; transition: background-color .15s ease; }
+	.kb-preview .kb-block.kb-active { background: color-mix(in oklch, var(--primary) 4%, transparent); }
+	.kb-mermaid { overflow-x: auto; padding: .5rem 0; }
+	.kb-mermaid svg { display: block; max-width: 100%; height: auto; }
+	.kb-plantuml { display: block; max-width: 100%; height: auto; margin: .6rem auto; }
 	.edit-actions, .edit-footer { display: flex; flex-wrap: wrap; gap: .65rem; align-items: center; justify-content: space-between; }
 	.edit-button {
 		display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.45rem;
@@ -537,6 +649,9 @@ const description = "KiteBlog 文章编辑器";
 	.asset-actions .edit-button { flex: 1; min-width: 8rem; }
 	.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 .85rem; }
 	.span-2 { grid-column: 1 / -1; }
+	.edit-checks { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; margin-bottom: .9rem; }
+	.edit-check { display: inline-flex; align-items: center; gap: .5rem; margin: 0; font-weight: 700; cursor: pointer; }
+	.edit-check input { width: auto; height: 1.1rem; accent-color: var(--primary); cursor: pointer; }
 	label { display: grid; gap: .4rem; margin-bottom: .9rem; font-weight: 700; }
 	label span { color: var(--content-meta); font-size: .84rem; }
 	input, textarea {
@@ -552,6 +667,6 @@ const description = "KiteBlog 文章编辑器";
 	}
 	.edit-status[data-state="success"] { color: oklch(0.55 0.14 155); }
 	.edit-status[data-state="error"] { color: oklch(0.56 0.18 25); }
-	@media (max-width: 900px) { .edit-grid { grid-template-columns: 1fr; } }
-	@media (max-width: 760px) { .edit-header { flex-direction: column; } .field-grid { grid-template-columns: 1fr; } .span-2 { grid-column: auto; } .edit-actions, .edit-button { width: 100%; } }
+	@media (max-width: 900px) { .kb-split { grid-template-columns: 1fr; } .strip-note { margin-left: 0; flex-basis: 100%; } }
+	@media (max-width: 760px) { .edit-header { flex-direction: column; } .field-grid { grid-template-columns: 1fr; } .span-2 { grid-column: auto; } .edit-actions, .edit-button { width: 100%; } .mode-hint { margin-left: 0; flex-basis: 100%; } }
 </style>
