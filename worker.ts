@@ -45,6 +45,8 @@ type PostInput = {
 	tags?: string[] | string;
 	description?: string;
 	image?: string;
+	draft?: boolean;
+	pinned?: boolean;
 	body?: string;
 };
 
@@ -553,11 +555,17 @@ function normalizePostInput(input: PostInput) {
 		tags: normalizeTags(input.tags),
 		description: cleanText(input.description, "", 360),
 		image: cleanText(input.image, "", 2048),
+		draft: input.draft === true,
+		pinned: input.pinned === true,
 		body,
 	};
 }
 
 function buildMarkdown(input: ReturnType<typeof normalizePostInput>) {
+	const flags = [
+		input.draft ? "draft: true\n" : "",
+		input.pinned ? "pinned: true\n" : "",
+	].join("");
 	return `---
 title: ${yamlString(input.title)}
 published: ${input.published}
@@ -565,7 +573,7 @@ description: ${yamlString(input.description)}
 tags: [${input.tags.map(yamlString).join(", ")}]
 category: ${yamlString(input.category)}
 image: ${yamlString(input.image)}
-slug: ${yamlString(input.slug)}
+${flags}slug: ${yamlString(input.slug)}
 ---
 
 ${input.body}
@@ -587,6 +595,8 @@ function parseFrontmatter(markdown: string) {
 				.map((tag) => tag.trim().replace(/^["']|["']$/g, ""))
 				.filter(Boolean)
 		: [];
+	const readBool = (key: string) =>
+		meta.match(new RegExp(`^${key}:\\s*(true|false)\\b`, "m"))?.[1] === "true";
 	return {
 		title: read("title"),
 		published: read("published"),
@@ -595,6 +605,8 @@ function parseFrontmatter(markdown: string) {
 		category: read("category"),
 		image: read("image"),
 		slug: sanitizeSlug(read("slug")),
+		draft: readBool("draft"),
+		pinned: readBool("pinned"),
 		body: body.trim(),
 	};
 }
@@ -1086,6 +1098,78 @@ function logout() {
 	);
 }
 
+const COVER_BACKUP_LIMIT = 5 * 1024 * 1024;
+
+const COVER_EXT_BY_TYPE: Record<string, string> = {
+	"image/png": "png",
+	"image/jpeg": "jpg",
+	"image/webp": "webp",
+	"image/gif": "gif",
+	"image/avif": "avif",
+};
+
+async function coverBackupImage(
+	env: Env,
+	imageUrl: string,
+	slug: string,
+): Promise<{ backup: boolean; url?: string; error?: string }> {
+	if (!/^https?:\/\//i.test(imageUrl)) {
+		return { backup: false };
+	}
+	const controller = new AbortController();
+	const timer = setTimeout(() => controller.abort(), 15000);
+	try {
+		const response = await fetch(imageUrl, {
+			redirect: "follow",
+			signal: controller.signal,
+		});
+		if (!response.ok) {
+			return { backup: false, error: `HTTP ${response.status}` };
+		}
+		const contentType = String(response.headers.get("content-type") || "")
+			.split(";")[0]
+			.trim()
+			.toLowerCase();
+		const ext = COVER_EXT_BY_TYPE[contentType];
+		if (!ext) {
+			return {
+				backup: false,
+				error: `不支持的图片类型 ${contentType || "未知"}`,
+			};
+		}
+		const stated = Number(response.headers.get("content-length") || 0);
+		if (stated > COVER_BACKUP_LIMIT) {
+			return { backup: false, error: "图片超过 5MB" };
+		}
+		const buffer = await response.arrayBuffer();
+		if (buffer.byteLength > COVER_BACKUP_LIMIT) {
+			return { backup: false, error: "图片超过 5MB" };
+		}
+		const path = uploadPath(slug, `cover.${ext}`);
+		const existing = await maybeGetGitHubFile(env, path);
+		if (existing) {
+			return { backup: true, url: `/${path.replace(/^public\//, "")}` };
+		}
+		await commitGitHubBase64File(
+			env,
+			path,
+			arrayBufferToBase64(buffer),
+			`asset: backup cover for ${slug}`,
+		);
+		return { backup: true, url: `/${path.replace(/^public\//, "")}` };
+	} catch (error) {
+		const message =
+			error instanceof Error && error.name === "AbortError"
+				? "下载超时"
+				: error instanceof Error
+					? error.message
+					: "未知错误";
+		return { backup: false, error: message };
+	} finally {
+		clearTimeout(timer);
+	}
+}
+
 async function handleAdminPosts(request: Request, env: Env, slug?: string) {
 	const session = await requireSession(request, env);
 	if (!session)
@@ -1108,6 +1192,8 @@ async function handleAdminPosts(request: Request, env: Env, slug?: string) {
 					tags: parsed.tags,
 					description: parsed.description,
 					image: parsed.image,
+					draft: parsed.draft,
+					pinned: parsed.pinned,
 				};
 			}),
 		);
@@ -1151,13 +1237,20 @@ async function handleAdminPosts(request: Request, env: Env, slug?: string) {
 				{ status: 409 },
 			);
 		}
+		const backup = await coverBackupImage(env, post.image, post.slug);
+		if (backup.url) post.image = backup.url;
 		await commitGitHubFile(
 			env,
 			path,
 			buildMarkdown(post),
 			`post: add ${post.slug}`,
 		);
-		return json({ ok: true, post: { ...post, path } });
+		return json({
+			ok: true,
+			post: { ...post, path },
+			coverBackedUp: backup.backup && !!backup.url,
+			coverBackupError: backup.error || null,
+		});
 	}
 
 	if (request.method === "PUT" && slug) {
@@ -1174,6 +1267,8 @@ async function handleAdminPosts(request: Request, env: Env, slug?: string) {
 		}
 		const path = postPath(slug);
 		const existing = await getGitHubFile(env, path);
+		const backup = await coverBackupImage(env, post.image, post.slug);
+		if (backup.url) post.image = backup.url;
 		await commitGitHubFile(
 			env,
 			path,
@@ -1181,7 +1276,12 @@ async function handleAdminPosts(request: Request, env: Env, slug?: string) {
 			`post: update ${post.slug}`,
 			existing.sha,
 		);
-		return json({ ok: true, post: { ...post, path } });
+		return json({
+			ok: true,
+			post: { ...post, path },
+			coverBackedUp: backup.backup && !!backup.url,
+			coverBackupError: backup.error || null,
+		});
 	}
 
 	if (request.method === "DELETE" && slug) {
@@ -1197,6 +1297,109 @@ async function handleAdminPosts(request: Request, env: Env, slug?: string) {
 	}
 
 	return json({ ok: false, error: "Method not allowed." }, { status: 405 });
+}
+
+async function handleAdminTags(request: Request, env: Env) {
+	const session = await requireSession(request, env);
+	if (!session)
+		return json({ ok: false, error: "Unauthorized." }, { status: 401 });
+
+	if (request.method === "GET") {
+		const tags = tagSummary(await getPostEntries(env));
+		return json({ ok: true, tags });
+	}
+
+	if (request.method === "POST") {
+		const body = (await request.json().catch(() => null)) as {
+			from?: string;
+			to?: string;
+			tag?: string;
+		} | null;
+		if (!body || typeof body !== "object") {
+			return json({ ok: false, error: "Invalid JSON body." }, { status: 400 });
+		}
+		const from = cleanText(body.from, "", 80);
+		const to = cleanText(body.to, "", 80);
+		const tag = cleanText(body.tag, "", 80);
+		if (body.from !== undefined && (!from || !to || from === to)) {
+			return json(
+				{ ok: false, error: "重命名需要有效的 from 和 to。" },
+				{ status: 400 },
+			);
+		}
+		if (body.tag !== undefined && !tag) {
+			return json({ ok: false, error: "tag 不能为空。" }, { status: 400 });
+		}
+
+		const entries = await getPostEntries(env);
+		const targets = entries.filter((entry) =>
+			(entry.parsed.tags || []).includes(from),
+		);
+		if (body.tag !== undefined) {
+			return await updateTagsAcrossPosts(
+				env,
+				targets.filter((entry) => (entry.parsed.tags || []).includes(tag)),
+				(tags) => tags.filter((item) => item !== tag),
+			);
+		}
+		return await updateTagsAcrossPosts(env, targets, (tags) =>
+			tags.map((item) => (item === from ? to : item)),
+		);
+	}
+
+	return json({ ok: false, error: "Method not allowed." }, { status: 405 });
+}
+
+async function updateTagsAcrossPosts(
+	env: Env,
+	targets: Awaited<ReturnType<typeof getPostEntries>>,
+	update: (tags: string[]) => string[],
+) {
+	const limit = 100;
+	if (targets.length > limit) {
+		return json(
+			{ ok: false, error: `一次性最多处理 ${limit} 篇文章，请分批操作。` },
+			{ status: 400 },
+		);
+	}
+	const skipped: string[] = [];
+	let updated = 0;
+	for (const target of targets) {
+		const rewritten = rewriteFrontmatterTags(target.content, update);
+		if (!rewritten) {
+			skipped.push(
+				target.parsed.slug ||
+					sanitizeSlug(target.name.replace(/\.(md|mdx)$/i, "")),
+			);
+			continue;
+		}
+		await commitGitHubFile(
+			env,
+			target.path,
+			rewritten,
+			`post: update tags for ${target.name.replace(/\.(md|mdx)$/i, "")}`,
+			target.sha,
+		);
+		updated += 1;
+	}
+	return json({ ok: true, updated, skipped });
+}
+
+function rewriteFrontmatterTags(
+	markdown: string,
+	update: (tags: string[]) => string[],
+) {
+	const match = markdown.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+	if (!match) return null;
+	const tagsMatch = match[1].match(/^tags:\s*\[([\s\S]*?)\]$/m);
+	if (!tagsMatch) return null;
+	const tags = tagsMatch[1]
+		.split(",")
+		.map((tag) => tag.trim().replace(/^["']|["']$/g, ""))
+		.filter(Boolean);
+	const next = update(tags);
+	const rendered = `tags: [${next.map((tag) => yamlString(tag)).join(", ")}]`;
+	return markdown.replace(/^tags:\s*\[[\s\S]*?\]$/m, rendered);
 }
 
 async function handleAdminAssets(request: Request, env: Env) {
@@ -1328,6 +1531,54 @@ function categorySummary(entries: Awaited<ReturnType<typeof getPostEntries>>) {
 	return Array.from(counts.entries())
 		.map(([name, count]) => ({ name, count }))
 		.sort((a, b) => a.name.localeCompare(b.name, "zh-Hans-CN"));
+}
+
+function tagSummary(entries: Awaited<ReturnType<typeof getPostEntries>>) {
+	const counts = new Map<
+		string,
+		{
+			count: number;
+			posts: Array<{
+				slug: string;
+				title: string;
+				published: string;
+				draft: boolean;
+				pinned: boolean;
+			}>;
+		}
+	>();
+	for (const entry of entries) {
+		const slug =
+			entry.parsed.slug || sanitizeSlug(entry.name.replace(/\.(md|mdx)$/i, ""));
+		for (const raw of entry.parsed.tags || []) {
+			const name = cleanText(raw, "", 80);
+			if (!name) continue;
+			const item = counts.get(name) || {
+				count: 0,
+				posts: [],
+			};
+			item.count += 1;
+			item.posts.push({
+				slug,
+				title: entry.parsed.title || slug,
+				published: entry.parsed.published,
+				draft: entry.parsed.draft,
+				pinned: entry.parsed.pinned,
+			});
+			counts.set(name, item);
+		}
+	}
+	return Array.from(counts.entries())
+		.map(([name, item]) => ({
+			name,
+			count: item.count,
+			posts: item.posts.sort((a, b) =>
+				String(b.published || "").localeCompare(String(a.published || "")),
+			),
+		}))
+		.sort(
+			(a, b) => b.count - a.count || a.name.localeCompare(b.name, "zh-Hans-CN"),
+		);
 }
 
 async function handleAdminCategories(
@@ -1484,6 +1735,8 @@ async function handleApi(request: Request, env: Env) {
 			return await handleAdminSettings(request, env);
 		if (pathname === "/api/admin/categories")
 			return await handleAdminCategories(request, env);
+		if (pathname === "/api/admin/tags")
+			return await handleAdminTags(request, env);
 		if (pathname === "/api/admin/links")
 			return await handleAdminLinks(request, env);
 		if (pathname === "/api/admin/friends")

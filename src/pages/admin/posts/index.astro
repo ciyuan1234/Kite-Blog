@@ -20,6 +20,7 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 					新建文章
 				</a>
 				<a href="/admin/categories/" class="posts-button">分类</a>
+				<a href="/admin/tags/" class="posts-button">标签</a>
 				<a href="/admin/links/" class="posts-button">个人链接</a>
 				<a href="/admin/friends/" class="posts-button">友链</a>
 				<a href="/admin/settings/" class="posts-button">设置</a>
@@ -29,6 +30,11 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 		<div class="posts-panel">
 			<div class="toolbar">
 				<input data-search placeholder="搜索标题、slug、分类或标签" />
+				<div class="filter-group" data-filter-group>
+					<button type="button" data-filter="all" class="active">全部</button>
+					<button type="button" data-filter="published">已发布</button>
+					<button type="button" data-filter="draft">草稿</button>
+				</div>
 				<button type="button" data-refresh>
 					<Icon is:inline name="material-symbols:refresh-rounded" />
 					刷新
@@ -44,7 +50,9 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 		const stateEl = document.querySelector("[data-session-state]");
 		const listEl = document.querySelector("[data-post-list]");
 		const searchEl = document.querySelector("[data-search]");
+		const filterGroup = document.querySelector("[data-filter-group]");
 		let posts = [];
+		let statusFilter = "all";
 
 		function escapeHtml(value) {
 			return String(value || "").replace(/[&<>"']/g, (char) => ({
@@ -68,6 +76,8 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 		function renderPosts() {
 			const query = searchEl?.value?.trim?.().toLowerCase() || "";
 			const filtered = posts.filter((post) => {
+				if (statusFilter === "draft" && post.draft !== true) return false;
+				if (statusFilter === "published" && post.draft === true) return false;
 				if (!query) return true;
 				return [post.title, post.slug, post.category, post.description, ...(post.tags || [])].join(" ").toLowerCase().includes(query);
 			});
@@ -78,7 +88,10 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 			}
 			listEl.innerHTML = filtered.map((post) => `<article class="post-item">
 				<div class="post-main">
-					<strong>${escapeHtml(post.title || post.slug)}</strong>
+					<strong>${escapeHtml(post.title || post.slug)}
+						${post.draft === true ? '<span class="badge draft">草稿</span>' : ""}
+						${post.pinned === true ? '<span class="badge pinned">置顶</span>' : ""}
+					</strong>
 					<p>${escapeHtml(post.description || "暂无摘要")}</p>
 					<span>${escapeHtml(post.published || "未设置日期")} · ${escapeHtml(post.category || "未分类")} · ${escapeHtml((post.tags || []).join(", ") || "无标签")}</span>
 				</div>
@@ -120,6 +133,15 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 		}
 
 		searchEl?.addEventListener("input", renderPosts);
+		filterGroup?.addEventListener("click", (event) => {
+			const button = event.target instanceof HTMLElement
+				? event.target.closest("[data-filter]")
+				: null;
+			if (!button) return;
+			statusFilter = button.getAttribute("data-filter") || "all";
+			filterGroup.querySelectorAll("[data-filter]").forEach((item) => item.classList.toggle("active", item === button));
+			renderPosts();
+		});
 		document.querySelector("[data-refresh]")?.addEventListener("click", loadPosts);
 		listEl?.addEventListener("click", (event) => {
 			const target = event.target instanceof HTMLElement ? event.target.closest("[data-delete]") : null;
@@ -155,6 +177,12 @@ const description = "KiteBlog 文章新增、编辑、删除和搜索。";
 	.posts-panel { padding: 1rem; }
 	.toolbar { margin-bottom: 1rem; }
 	.toolbar input { flex: 1; min-width: 14rem; border: 1px solid var(--line-divider); border-radius: 8px; padding: .75rem .85rem; color: inherit; background: color-mix(in oklch, var(--card-bg) 70%, transparent); }
+	.filter-group { display: flex; flex-wrap: wrap; gap: .5rem; }
+	.filter-group button { min-height: 0; padding: .5rem .7rem; font-size: .86rem; }
+	.filter-group button.active { color: white; border-color: transparent; background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22)); }
+	.badge { display: inline-block; vertical-align: middle; margin-left: .4rem; padding: .1rem .45rem; border-radius: 6px; font-size: .72rem; font-weight: 800; }
+	.badge.draft { color: oklch(0.56 0.18 25); background: color-mix(in oklch, oklch(0.56 0.18 25) 14%, transparent); }
+	.badge.pinned { color: var(--primary); background: color-mix(in oklch, var(--primary) 14%, transparent); }
 	.post-list { display: grid; gap: .8rem; }
 	.post-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; padding: 1rem; }
 	.post-main { min-width: 0; }

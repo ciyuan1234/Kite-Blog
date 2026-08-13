@@ -1,0 +1,190 @@
+---
+import { Icon } from "astro-icon/components";
+import MainGridLayout from "@/layouts/MainGridLayout.astro";
+
+const title = "标签管理";
+const description = "KiteBlog 标签统计、重命名和删除。";
+---
+
+<MainGridLayout title={title} description={description}>
+	<section class="tags-shell">
+		<header class="tags-header">
+			<div>
+				<p class="eyebrow">Tags</p>
+				<h1>标签管理</h1>
+				<p data-session-state>正在检查登录状态...</p>
+			</div>
+			<div class="tags-actions">
+				<a href="/admin/posts/" class="tags-button">
+					<Icon is:inline name="material-symbols:article-outline-rounded" />
+					文章
+				</a>
+				<a href="/admin/categories/" class="tags-button">分类</a>
+				<a href="/admin/settings/" class="tags-button">设置</a>
+			</div>
+		</header>
+
+		<div class="tags-panel">
+			<div class="toolbar">
+				<input data-search placeholder="搜索标签名" />
+				<button type="button" data-refresh>
+					<Icon is:inline name="material-symbols:refresh-rounded" />
+					刷新
+				</button>
+				<p class="hint">重命名或删除会逐篇提交到 GitHub；一篇文章每晚一次提交。</p>
+			</div>
+			<div class="tag-list" data-tag-list>
+				<p class="empty-state">正在读取标签...</p>
+			</div>
+		</div>
+	</section>
+
+	<script is:inline>
+		const stateEl = document.querySelector("[data-session-state]");
+		const listEl = document.querySelector("[data-tag-list]");
+		const searchEl = document.querySelector("[data-search]");
+		let tags = [];
+
+		function escapeHtml(value) {
+			return String(value || "").replace(/[&<>"']/g, (char) => ({
+				"&": "&amp;",
+				"<": "&lt;",
+				">": "&gt;",
+				'"': "&quot;",
+				"'": "&#39;",
+			})[char]);
+		}
+
+		async function apiRequest(url, options = {}) {
+			const headers = new Headers(options.headers || {});
+			if (options.body) headers.set("Content-Type", "application/json");
+			const response = await fetch(url, { ...options, headers, cache: "no-store" });
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok || payload.ok === false) {
+				throw new Error(payload.error || `请求失败：${response.status}`);
+			}
+			return payload;
+		}
+
+		function renderTags() {
+			const query = searchEl?.value?.trim?.().toLowerCase() || "";
+			const filtered = tags.filter((tag) => !query || tag.name.toLowerCase().includes(query));
+			if (!listEl) return;
+			if (!filtered.length) {
+				listEl.innerHTML = '<p class="empty-state">没有找到标签。</p>';
+				return;
+			}
+			listEl.innerHTML = filtered.map((tag) => `<article class="tag-item">
+				<div class="tag-main">
+					<strong># ${escapeHtml(tag.name)} <span class="tag-count">${tag.count} 篇</span></strong>
+					<ul>${tag.posts.map((post) => `<li>
+						<a href="/admin/posts/edit/?slug=${encodeURIComponent(post.slug)}">${escapeHtml(post.title)}</a>
+						<span>${escapeHtml(post.published || "未设置日期")}${post.draft ? " · 草稿" : ""}${post.pinned ? " · 置顶" : ""}</span>
+					</li>`).join("")}</ul>
+				</div>
+				<div class="item-actions">
+					<button type="button" data-rename="${escapeHtml(tag.name)}">重命名</button>
+					<button type="button" data-remove="${escapeHtml(tag.name)}" class="danger">删除</button>
+				</div>
+			</article>`).join("");
+		}
+
+		async function loadTags() {
+			if (listEl) listEl.innerHTML = '<p class="empty-state">正在读取标签...</p>';
+			try {
+				const session = await apiRequest("/api/admin/session");
+				if (!session.authenticated) {
+					stateEl.textContent = "未登录";
+					listEl.innerHTML = '<a class="login-link" href="/api/auth/github/start">使用 GitHub 登录</a>';
+					return;
+				}
+				stateEl.textContent = `已登录：@${session.user.login}`;
+				const payload = await apiRequest("/api/admin/tags");
+				tags = payload.tags || [];
+				renderTags();
+			} catch (error) {
+				if (listEl) listEl.innerHTML = `<p class="error-text">${escapeHtml(error.message)}</p>`;
+			}
+		}
+
+		async function renameTag(from) {
+			const to = prompt(`把标签“${from}”重命名为：`, from).trim();
+			if (!to || to === from) return;
+			if (!confirm(`将“${from}”重命名为“${to}”并提交到 GitHub？`)) return;
+			try {
+				await apiRequest("/api/admin/tags", {
+					method: "POST",
+					body: JSON.stringify({ from, to }),
+				});
+				await loadTags();
+			} catch (error) {
+				alert(error.message);
+			}
+		}
+
+		async function removeTag(tag) {
+			if (!confirm(`删除标签“${tag}”？会从所有相关文章中移除，并提交到 GitHub。`)) return;
+			try {
+				await apiRequest("/api/admin/tags", {
+					method: "POST",
+					body: JSON.stringify({ tag }),
+				});
+				await loadTags();
+			} catch (error) {
+				alert(error.message);
+			}
+		}
+
+		searchEl?.addEventListener("input", renderTags);
+		document.querySelector("[data-refresh]")?.addEventListener("click", loadTags);
+		listEl?.addEventListener("click", (event) => {
+			const target = event.target instanceof HTMLElement ? event.target.closest("[data-rename], [data-remove]") : null;
+			if (!target) return;
+			const name = target.getAttribute("data-rename") || target.getAttribute("data-remove");
+			if (!name) return;
+			if (target.hasAttribute("data-rename")) renameTag(name);
+			else removeTag(name);
+		});
+		loadTags();
+	</script>
+</MainGridLayout>
+
+<style>
+	.tags-shell { display: grid; gap: 1rem; }
+	.tags-header, .tags-panel, .tag-item {
+		border: 1px solid var(--line-divider);
+		border-radius: 12px;
+		background: color-mix(in oklch, var(--card-bg) 82%, transparent);
+		box-shadow: var(--surface-shadow);
+		backdrop-filter: saturate(1.14) blur(var(--kite-glass-strength, 16px));
+	}
+	.tags-header { display: flex; justify-content: space-between; gap: 1rem; padding: clamp(1.2rem, 3vw, 2rem); }
+	.eyebrow { margin: 0 0 .45rem; color: var(--primary); font-size: .78rem; font-weight: 800; text-transform: uppercase; }
+	h1 { margin: 0; font-size: clamp(1.9rem, 4vw, 3.1rem); line-height: 1.05; letter-spacing: 0; }
+	.tags-header p, .tag-item p, .hint { margin: .5rem 0 0; color: var(--content-meta); line-height: 1.7; }
+	.tags-actions, .item-actions, .toolbar { display: flex; flex-wrap: wrap; gap: .65rem; }
+	.tags-button, .item-actions button, .login-link {
+		display: inline-flex; align-items: center; justify-content: center; gap: .4rem; min-height: 2.45rem;
+		border: 1px solid color-mix(in oklch, var(--primary) 20%, var(--line-divider)); border-radius: 8px;
+		padding: .6rem .8rem; color: var(--primary); background: color-mix(in oklch, var(--primary) 10%, transparent);
+		font-weight: 800; text-decoration: none; cursor: pointer;
+	}
+	.tags-button:first-child { color: white; background: linear-gradient(135deg, var(--primary), oklch(0.66 0.15 22)); }
+	.item-actions button { color: var(--primary); }
+	.item-actions button.danger { color: oklch(0.56 0.18 25); }
+	.tags-panel { padding: 1rem; }
+	.toolbar { margin-bottom: 1rem; align-items: center; }
+	.toolbar input { flex: 1; min-width: 14rem; border: 1px solid var(--line-divider); border-radius: 8px; padding: .75rem .85rem; color: inherit; background: color-mix(in oklch, var(--card-bg) 70%, transparent); }
+	.tag-list { display: grid; gap: .8rem; }
+	.tag-item { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; padding: 1rem; }
+	.tag-main { min-width: 0; }
+	.tag-item strong { display: block; font-size: 1.1rem; overflow-wrap: anywhere; }
+	.tag-count { font-size: .78rem; color: var(--content-meta); font-weight: 800; }
+	.tag-item ul { list-style: none; margin: .6rem 0 0; padding: 0; display: grid; gap: .3rem; }
+	.tag-item li { display: flex; flex-wrap: wrap; gap: .5rem; align-items: baseline; font-size: .9rem; }
+	.tag-item li a { color: var(--primary); text-decoration: none; font-weight: 700; }
+	.tag-item li a:hover { text-decoration: underline; }
+	.tag-item li span, .empty-state { color: var(--content-meta); font-size: .8rem; }
+	.error-text { color: oklch(0.56 0.18 25); font-weight: 800; }
+	@media (max-width: 760px) { .tags-header, .tag-item { grid-template-columns: 1fr; flex-direction: column; } .item-actions button { flex: 1; } }
+</style>
