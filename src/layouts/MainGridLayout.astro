@@ -9,6 +9,7 @@ import type { MarkdownHeading } from "astro";
 import { Icon } from "astro-icon/components";
 import ImageWrapper from "@/components/common/ImageWrapper.astro";
 import FloatingControls from "@/components/controls/FloatingControls.astro";
+import ReadingProgress from "@/components/controls/ReadingProgress.astro";
 import ScrollDownIndicator from "@/components/controls/ScrollDownIndicator.astro";
 import BackgroundPlayer from "@/components/features/BackgroundPlayer.astro";
 import TypewriterText from "@/components/features/TypewriterText.astro";
@@ -942,6 +943,8 @@ const hasMultipleImages =
 </div>
 
 <FloatingControls headings={headings} encrypted={encrypted} />
+
+{isPostPage && <ReadingProgress />}
 
 <!--
     触屏设备上让代码块的复制按钮默认隐藏，点一下代码块才显形。
