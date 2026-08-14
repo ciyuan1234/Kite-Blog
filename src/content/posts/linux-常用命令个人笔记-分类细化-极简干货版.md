@@ -3,8 +3,8 @@ title: "Linux 常用命令"
 published: 2026-08-12
 description: ""
 tags: ["linux"]
-category: "随笔"
-image: "https://w.wallhaven.cc/full/8g/wallhaven-8gjd9y.jpg"
+category: "运维"
+image: "/uploads/2026/08/linux-常用命令个人笔记-分类细化-极简干货版/cover.jpg"
 slug: "linux-常用命令个人笔记-分类细化-极简干货版"
 ---
 
